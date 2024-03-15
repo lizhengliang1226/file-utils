@@ -9,6 +9,7 @@ import javax.lang.model.element.VariableElement;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -270,6 +271,18 @@ public class FileUtils {
      */
     private void initReplaceMap() {
         Props props = PropsUtil.get("config/replace.txt");
+        Properties p=new Properties();
+        String jarDir = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent();
+        // 构建文件路径
+        String filePath = jarDir + File.separator + "replace.txt";
+        try {
+            p.load(new FileInputStream(filePath));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        p.forEach((k,v)->{
+            replaceMap.put((String) k, (String) v);
+        });
         props.forEach((k,v)->{
             replaceMap.put((String) k, (String) v);
         });

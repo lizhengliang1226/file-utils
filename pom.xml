@@ -58,7 +58,7 @@
               <mainClass>com.lzl.Main</mainClass>
             </manifest>
           </archive>
-          <outputDirectory>E:\0ad403fe-fca2-4891-b124-3153b9b2947e\TEMP</outputDirectory>
+          <outputDirectory>D:\0ad403fe-fca2-4891-b124-3153b9b2947e\TEMP</outputDirectory>
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
