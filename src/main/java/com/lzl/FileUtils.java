@@ -51,7 +51,6 @@ public class FileUtils {
      */
     public void init() {
         initReplaceMap();
-        initFileList();
     }
 
     /**
@@ -93,7 +92,6 @@ public class FileUtils {
                     }
                 });
                 case COPY -> batchCopyOperate(file);
-                case GENERATE_INSERT_SQL -> generateInsertScript();
                 default -> System.out.println("没有该操作或还没开发！");
             }
         }
@@ -207,7 +205,6 @@ public class FileUtils {
 
     private void exit(){
 //        replaceFile.delete();
-        fileList.delete();
         System.exit(-1);
     }
 
@@ -352,136 +349,4 @@ public class FileUtils {
         }
         return flag.equals("y");
     }
-
-
-    //------------------------------------------------------生成INSERT脚本 start------------------------------------------------------------
-    private String base_insert = "insert into vms_video_info(vid,file_name,file_path,file_size,update_time) values %s";
-
-    private final BigDecimal BASE_FILE_SPACE = new BigDecimal(1024 * 1024 * 1024);
-
-    @FunctionalInterface
-    interface SqlOperate {
-        void writeSqlToFile(String fileName, String absPath, String sql) throws Exception;
-    }
-
-    private Properties FILE_LIST = new Properties();
-    private File fileList = new File(GlobalConstant.curPath + "\\file_list.txt");
-    private void initFileList() {
-        if (fileList.exists()) {
-            try {
-                FILE_LIST.load(new FileReader(fileList));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            try {
-                fileList.createNewFile();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private void generateInsertScript() throws Exception {
-//        String operPath = "E:\\0ad403fe-fca2-4891-b124-3153b9b2947e";
-        File operDir = new File(operateInfo.getOptSrcPath());
-        if (operDir.isDirectory()) {
-            File insertScript = new File(operateInfo.getOptSrcPath() + "\\insert.sql");
-            if (insertScript.exists()) {
-                insertScript.delete();
-            }
-            insertScript.createNewFile();
-
-            File fileList = new File(operateInfo.getOptSrcPath() + "\\file_list.txt");
-            if (!fileList.exists()) {
-                fileList.createNewFile();
-            }
-            if (!GlobalConstant.curPath.equals(operateInfo.getOptSrcPath())) {
-                FILE_LIST.clear();
-                FILE_LIST.load(new FileInputStream(fileList));
-            }
-            Set<String> currentAddFile = new HashSet<>(16);
-            generateInsertSql(operDir, (fileName, absPath, sql) -> {
-                Object f = FILE_LIST.get(fileName);
-                if (f == null || "".equals(f)) {
-                    if (currentAddFile.contains(fileName)) {
-                        System.out.println(fileName + "已经存在，请检查！");
-                    } else {
-                        writeStringToFile(insertScript, sql);
-                        currentAddFile.add(fileName);
-                        writeStringToFile(fileList, fileName + "=" + absPath.replace("\\", "/"));
-                    }
-                }
-            });
-
-        } else {
-            System.out.println("输入路径不是一个目录，无法遍历文件生成sql脚本，请重试！");
-        }
-    }
-
-    /**
-     * 向指定文件写入字符串
-     *
-     * @param file
-     * @param str
-     */
-    private void writeStringToFile(File file, String str) throws Exception {
-        BufferedWriter bw = new BufferedWriter(new FileWriter(file, true));
-        bw.write(str + "\n");
-        bw.flush();
-        bw.close();
-    }
-
-
-    /**
-     * 输入一个目录，获取目录下所有的文件信息，构建出插入的sql语句，生成脚本写入文件中
-     */
-    public void generateInsertSql(File dir, SqlOperate sqlOperate) throws Exception {
-        File[] files = dir.listFiles();
-        for (File file : files) {
-            if (file.isDirectory()) {
-                generateInsertSql(file, sqlOperate);
-            } else {
-                if (isVideo(file)) {
-                    long l = file.lastModified();
-                    SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    String updateTime = sd.format(l);
-                    String name = file.getName();
-                    String absolutePath = file.getAbsolutePath();
-                    BigDecimal space = new BigDecimal(file.length()).divide(BASE_FILE_SPACE).setScale(2, RoundingMode.DOWN);
-                    String fileSpace = space.toPlainString() + "G";
-                    if (space.compareTo(BigDecimal.ONE) < 0) {
-                        fileSpace = space.multiply(new BigDecimal("1024")).setScale(0, RoundingMode.DOWN).toPlainString() + "MB";
-                    }
-                    String vId = getSimpleName(name).split("\\.")[0];
-                    String sql = assembleSql(base_insert, "'" + vId + "'", "'" + name + "'", "'" + absolutePath.replace("\\", "/") + "'",
-                                             "'" + fileSpace + "'", "'" + updateTime + "'");
-                    sqlOperate.writeSqlToFile(name, absolutePath, sql);
-                }
-            }
-        }
-
-    }
-
-    private String assembleSql(String tmpl, String... args) {
-        return String.format(tmpl, Arrays.stream(args).collect(Collectors.joining(",", "(", ");")));
-    }
-
-    /**
-     * 判断一个文件是不是视频
-     *
-     * @param file
-     * @return
-     */
-    public boolean isVideo(File file) {
-        String fileName = file.getName().toLowerCase();
-        for (String ext : new String[]{"mp4", "avi"}) {
-            boolean b = fileName.endsWith(ext);
-            if (b) {
-                return b;
-            }
-        }
-        return false;
-    }
-    //------------------------------------------------------生成INSERT脚本 end------------------------------------------------------------
 }
