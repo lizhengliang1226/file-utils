@@ -25,9 +25,11 @@ import java.util.stream.Collectors;
  *
  * @author LZL
  * @version v1.0
- * @date 2022/8/14-23:33
+ * @since 2022/8/14-23:33
  */
 public class FileUtils {
+    private static final Pattern NORMAL_NAME_REG = Pattern.compile("([a-zA-Z]{2,5})[-_](\\d{3,4})");
+    private static final Pattern FC2_NAME_REG = Pattern.compile("[Ff][Cc]2[-_]*(?:[Pp]{2}[Vv])*[-_](\\d{7})");
     /**
      * 操作信息
      */
@@ -35,7 +37,7 @@ public class FileUtils {
     /**
      * 番号转换工具
      */
-    private final VidTransUtil transUtil = new VidTransUtil();
+//    private final VidTransUtil transUtil = new VidTransUtil();
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
     public static void main(String[] args) throws Exception {
@@ -55,8 +57,6 @@ public class FileUtils {
 
     /**
      * 启动
-     *
-     * @throws Exception
      */
     public void start() throws Exception {
         inputOperateInfo();
@@ -99,9 +99,10 @@ public class FileUtils {
 
     /**
      * 批量操作，遍历目录下的所有文件，如果是目录，根据断言判断此目录是否要跳过，是文件，判断文件扩展名符合操作扩展名，则调用消费者接口执行对应的文件操作
-     * @param file 操作文件列表
+     *
+     * @param file       操作文件列表
      * @param shouldSkip 文件为目录时是否应该跳过操作的断言
-     * @param opt 对文件执行的操作
+     * @param opt        对文件执行的操作
      */
     private void batchOperate(File file, Predicate<String> shouldSkip, Consumer<File> opt) {
         final File[] files = file.listFiles();
@@ -203,7 +204,7 @@ public class FileUtils {
         System.out.println("+" + "-".repeat(60) + "+");
     }
 
-    private void exit(){
+    private void exit() {
 //        replaceFile.delete();
         System.exit(-1);
     }
@@ -216,29 +217,35 @@ public class FileUtils {
             System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.curPath + "】)：");
             String srcPath;
             srcPath = GlobalConstant.scanner.nextLine();
-            if (isBlank(srcPath)) srcPath = GlobalConstant.curPath;
+            if (isBlank(srcPath)) {
+                srcPath = GlobalConstant.curPath;
+            }
             return srcPath;
         }, this::isDir, operateInfo::setOptSrcPath, (path) -> {
             System.out.println("输入的路径【" + path + "】不存在，请重新输入!");
         });
         inputInfo(() -> {
-                      System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                      String exts = GlobalConstant.scanner.nextLine();
-                      if (isBlank(exts)) exts = String.join(",", GlobalConstant.VIDEO_EXTS);
-                      return exts;
-                  }, (exts) -> Arrays.stream(exts.split(","))
-                                     .filter(GlobalConstant.VIDEO_EXTS::contains).toList().size() > 0,
-                  (exts) -> {
-                      exts = Arrays.stream(exts.split(","))
-                                   .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
-                      operateInfo.setOptExts(exts.toLowerCase());
-                  }, (exts) -> {
+                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
+                    String exts = GlobalConstant.scanner.nextLine();
+                    if (isBlank(exts)) {
+                        exts = String.join(",", GlobalConstant.VIDEO_EXTS);
+                    }
+                    return exts;
+                }, (exts) -> Arrays.stream(exts.split(","))
+                        .filter(GlobalConstant.VIDEO_EXTS::contains).toList().size() > 0,
+                (exts) -> {
+                    exts = Arrays.stream(exts.split(","))
+                            .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
+                    operateInfo.setOptExts(exts.toLowerCase());
+                }, (exts) -> {
                     System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!");
                 });
         inputInfo(() -> {
             System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.curPath + "】)：");
             String tagPath = GlobalConstant.scanner.nextLine();
-            if (isBlank(tagPath)) tagPath = GlobalConstant.curPath;
+            if (isBlank(tagPath)) {
+                tagPath = GlobalConstant.curPath;
+            }
             return tagPath;
         }, this::isDir, operateInfo::setOptTargetPath, (path) -> {
             System.out.println("输入的路径【" + path + "】不存在，请重新输入!");
@@ -268,7 +275,7 @@ public class FileUtils {
      */
     private void initReplaceMap() {
         Props props = PropsUtil.get("config/replace.txt");
-        Properties p=new Properties();
+        Properties p = new Properties();
         String jarDir = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent();
         // 构建文件路径
         String filePath = jarDir + File.separator + "replace.txt";
@@ -277,10 +284,10 @@ public class FileUtils {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        p.forEach((k,v)->{
+        p.forEach((k, v) -> {
             replaceMap.put((String) k, (String) v);
         });
-        props.forEach((k,v)->{
+        props.forEach((k, v) -> {
             replaceMap.put((String) k, (String) v);
         });
     }
@@ -299,6 +306,7 @@ public class FileUtils {
 
     /**
      * 获取文件符合要求的名称
+     *
      * @param name 原来的文件名
      * @return 格式化后的文件名
      */
@@ -311,8 +319,25 @@ public class FileUtils {
         }
         String ext = name.substring(name.lastIndexOf("."));
         name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
-        if(name.contains("FC2"))return name+ext;
-        name = transUtil.transform(name);
+//        if(name.contains("FC2"))return name+ext;
+        Matcher m1 = NORMAL_NAME_REG.matcher(name);
+        String id = "";
+        while (m1.find()) {
+            String g1 = m1.group(1);
+            String g2 = m1.group(2);
+            if (name.lastIndexOf("C") >= m1.end(2)) {
+                id = g1 + "-" + g2 + "-C";
+            } else {
+                id = g1 + "-" + g2;
+            }
+        }
+        Matcher m2 = FC2_NAME_REG.matcher(name);
+        while (m2.find()) {
+            String g1 = m2.group(1);
+            id = "FC2-PPV-" + g1;
+        }
+        name = id;
+//        name = transUtil.transform(name);
         return name + ext;
     }
 
