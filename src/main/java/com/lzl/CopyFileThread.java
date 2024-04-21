@@ -16,20 +16,20 @@ import java.util.concurrent.CountDownLatch;
  * @version v1.0
  * @date 2023/4/16-17:59
  */
-public class CopyFileThread implements Runnable{
+public class CopyFileThread implements Runnable {
     private File srcFile;
     private File tagFile;
     private long start;
     private long end;
     private CountDownLatch latch;
-    private ConsoleProgressBar bar=new ConsoleProgressBar();
+    private ConsoleProgressBar bar = new ConsoleProgressBar();
 
-    public CopyFileThread(File srcFile, File tagFile, long start, long end,CountDownLatch latch) {
+    public CopyFileThread(File srcFile, File tagFile, long start, long end, CountDownLatch latch) {
         this.srcFile = srcFile;
         this.tagFile = tagFile;
         this.start = start;
         this.end = end;
-        this.latch=latch;
+        this.latch = latch;
     }
 
     public CopyFileThread(String srcFile, String tagFile, long start, long end) {
@@ -41,11 +41,11 @@ public class CopyFileThread implements Runnable{
 
     @Override
     public void run() {
-        LocalTime bgnDate=LocalTime.now();
-        System.out.println("开始时间："+ DateTimeFormatter.ofPattern("HH:mm:ss").format(bgnDate));
+        LocalTime bgnDate = LocalTime.now();
+        System.out.println("开始时间：" + DateTimeFormatter.ofPattern("HH:mm:ss").format(bgnDate));
         try {
-            RandomAccessFile in=new RandomAccessFile(srcFile, "r");
-            RandomAccessFile out=new RandomAccessFile(tagFile, "rw");
+            RandomAccessFile in = new RandomAccessFile(srcFile, "r");
+            RandomAccessFile out = new RandomAccessFile(tagFile, "rw");
             in.seek(start);
             out.seek(start);
             FileChannel inChannel = in.getChannel();
@@ -65,11 +65,11 @@ public class CopyFileThread implements Runnable{
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        LocalTime endDate=LocalTime.now();
-        System.out.println("结束时间："+ DateTimeFormatter.ofPattern("HH:mm:ss").format(endDate));
+        LocalTime endDate = LocalTime.now();
+        System.out.println("结束时间：" + DateTimeFormatter.ofPattern("HH:mm:ss").format(endDate));
         Duration duration = Duration.between(bgnDate, endDate);
-        System.out.println("总耗时："+ duration.toMinutes()+"分"+duration.toSecondsPart()+"秒");
-        System.out.println("复制【"+srcFile.getName()+"】成功！");
+        System.out.println("总耗时：" + duration.toMinutes() + "分" + duration.toSecondsPart() + "秒");
+        System.out.println("复制【" + srcFile.getName() + "】成功！");
         latch.countDown();
     }
 }
