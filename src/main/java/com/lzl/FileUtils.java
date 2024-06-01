@@ -1,16 +1,9 @@
 package com.lzl;
 
-import cn.hutool.core.bean.BeanDesc;
-import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.setting.dialect.Props;
 import cn.hutool.setting.dialect.PropsUtil;
 
-import javax.lang.model.element.VariableElement;
 import java.io.*;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
@@ -135,15 +128,15 @@ public class FileUtils {
     private void batchCopyOperate(File file) throws InterruptedException {
         List<File> fileList = new ArrayList<>();
         searchAllFile(file, fileList);
-        CountDownLatch countDownLatch = new CountDownLatch(Operate.BLOCK_COUNT * fileList.size());
+//        CountDownLatch countDownLatch = new CountDownLatch(Operate.BLOCK_SIZE * fileList.size());
         fileList.forEach(f -> {
             try {
-                Operate.COPY.doOpt(f, operateInfo.getOptTargetPath(), countDownLatch);
+                Operate.COPY.doOpt(f, operateInfo.getOptTargetPath());
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         });
-        countDownLatch.await();
+//        countDownLatch.await();
     }
 
     private void searchAllFile(File file, List<File> result) {

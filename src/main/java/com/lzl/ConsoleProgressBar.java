@@ -1,8 +1,4 @@
-package com.lzl; /**
- * @author LZL
- * @version v1.0
- * @date 2023/4/16-20:05
- */
+package com.lzl;
 
 
 import java.util.Arrays;
