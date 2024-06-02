@@ -12,7 +12,6 @@ import java.nio.channels.FileLock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
@@ -22,26 +21,16 @@ import java.util.stream.IntStream;
  * @date 2023/4/16-17:59
  */
 public class CopyFileThread implements Supplier<String> {
-    private File srcFile;
-    private File tagFile;
-    private long start;
-    private long end;
-    private CountDownLatch latch;
-    private ConsoleProgressBar bar = new ConsoleProgressBar();
+    private final File srcFile;
+    private final File tagFile;
+    private final long start;
+    private final long end;
     private int blockNo;
     /**
      * 内存映射块大小100m
      */
     private static final long MEMORY_MAPPED_BLOCK_SIZE = 1024 * 1024 * 100;
     private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    public CopyFileThread(File srcFile, File tagFile, long start, long end, CountDownLatch latch) {
-        this.srcFile = srcFile;
-        this.tagFile = tagFile;
-        this.start = start;
-        this.end = end;
-        this.latch = latch;
-    }
 
     public CopyFileThread(File srcFile, File tagFile, long start, long end, int blockNo) {
         this.srcFile = srcFile;
