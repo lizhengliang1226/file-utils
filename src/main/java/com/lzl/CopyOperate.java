@@ -2,7 +2,6 @@ package com.lzl;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.log.Log;
-import me.tongfei.progressbar.ProgressBar;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +29,7 @@ public class CopyOperate implements FileOperate {
     /**
      * 文件分块大小，1g
      */
-    public static final int BLOCK_SIZE = 1024 * 1024 * 1024;
+    public static final long BLOCK_SIZE = 1024 * 1024 * 1024;
     private final File srcFile;
     private final Object[] args;
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -57,10 +56,10 @@ public class CopyOperate implements FileOperate {
             long length = srcFile.length();
             // 计算块数
             long blockCount = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
-            ProgressBar progressBar = ProgressBar.builder().setTaskName(name).setInitialMax(blockCount).build();
+//            ProgressBar progressBar = ProgressBar.builder().setTaskName(name).setInitialMax(blockCount).build();
             // 计算每块的开始地址和结束地址，存储在List<Pair>中
             List<Pair<Long, Long>> blockRangePairs = IntStream.range(0, (int) blockCount).parallel().mapToObj(i -> {
-                long start = (long) BLOCK_SIZE * i;
+                long start = BLOCK_SIZE * i;
                 long end = Math.min(start + BLOCK_SIZE, length);
                 return Pair.of(start, end);
             }).toList();
@@ -71,10 +70,14 @@ public class CopyOperate implements FileOperate {
                 int blockNo = blockRangePairs.indexOf(pair);
                 CopyFileThread task = new CopyFileThread(srcFile, tagFile, start, end, blockNo);
                 CompletableFuture<String> taskFuture = CompletableFuture.supplyAsync(task, pool);
-                taskFuture.thenAccept(s -> {
-                    progressBar.step();
-                    progressBar.refresh();
-                    Log.get().info(s);
+                taskFuture.whenComplete((res, ex) -> {
+                    if (ex!= null) {
+                        ex.printStackTrace();
+                        Log.get().error("文件{}复制发生了异常，异常信息：{}", name, ex.getMessage());
+                    }
+//                    progressBar.step();
+//                    progressBar.refresh();
+                    Log.get().info(res);
                 });
                 return taskFuture;
             }).toList();

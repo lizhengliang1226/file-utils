@@ -105,7 +105,8 @@ public class CopyFileThread implements Supplier<String> {
             throw new RuntimeException(e);
         }
         LocalDateTime endDate = LocalDateTime.now();
-//        Log.get().info("文件{}第{}块结束复制，结束时间：{}，总耗时：{}秒", srcFile.getName(), blockNo, formatter.format(endDate),Duration.between(bgnDate, endDate).getSeconds());
+//        Log.get().info("文件{}第{}块结束复制，结束时间：{}，总耗时：{}秒", srcFile.getName(), blockNo, formatter.format(endDate),
+//                       Duration.between(bgnDate, endDate).getSeconds());
         return String.format("文件%s第%d块复制成功", srcFile.getName(), blockNo);
     }
 }
