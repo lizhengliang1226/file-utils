@@ -5,13 +5,14 @@ import cn.hutool.setting.dialect.PropsUtil;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static com.lzl.Operate.COPY;
 
 /**
  * 文件工具类
@@ -68,7 +69,7 @@ public class FileUtils {
             switch (opt) {
                 case MOVE -> batchOperate(file, (name) -> false, (f1) -> {
                     try {
-                        Operate.MOVE.doOpt(f1, operateInfo.getOptTargetPath());
+                        Operate.MOVE.getOpt(f1, operateInfo.getOptTargetPath()).invoke();
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -78,13 +79,13 @@ public class FileUtils {
                         String name = f1.getName();
                         if (!isContainChinese(name)) {
                             name = getSimpleName(name);
-                            Operate.RENAME.doOpt(f1, name);
+                            Operate.RENAME.getOpt(f1, name).invoke();
                         }
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 });
-                case COPY -> batchCopyOperate(file);
+                case COPY -> batchCopyOperate(file,COPY);
                 default -> System.out.println("没有该操作或还没开发！");
             }
         }
@@ -125,18 +126,16 @@ public class FileUtils {
         return split[split.length - 1];
     }
 
-    private void batchCopyOperate(File file) throws InterruptedException {
+    private void batchCopyOperate(File file,Operate opt) throws InterruptedException {
         List<File> fileList = new ArrayList<>();
         searchAllFile(file, fileList);
-//        CountDownLatch countDownLatch = new CountDownLatch(Operate.BLOCK_SIZE * fileList.size());
         fileList.forEach(f -> {
             try {
-                Operate.COPY.doOpt(f, operateInfo.getOptTargetPath());
+                opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         });
-//        countDownLatch.await();
     }
 
     private void searchAllFile(File file, List<File> result) {
@@ -198,7 +197,6 @@ public class FileUtils {
     }
 
     private void exit() {
-//        replaceFile.delete();
         System.exit(-1);
     }
 
