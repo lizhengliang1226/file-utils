@@ -1,8 +1,6 @@
 package com.lzl;
 
-import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.lang.Pair;
-import cn.hutool.log.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -32,6 +29,11 @@ public class CopyFileThread implements Supplier<String> {
     private CountDownLatch latch;
     private ConsoleProgressBar bar = new ConsoleProgressBar();
     private int blockNo;
+    /**
+     * 内存映射块大小100m
+     */
+    private static final long MEMORY_MAPPED_BLOCK_SIZE = 1024 * 1024 * 100;
+    private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public CopyFileThread(File srcFile, File tagFile, long start, long end, CountDownLatch latch) {
         this.srcFile = srcFile;
@@ -52,7 +54,7 @@ public class CopyFileThread implements Supplier<String> {
     @Override
     public String get() {
         LocalDateTime bgnDate = LocalDateTime.now();
-        Log.get().info("文件{}第{}块开始复制，开始时间：{}", srcFile.getName(), blockNo, LocalDateTimeUtil.format(bgnDate, "yyyy-MM-dd HH:mm:ss"));
+//        Log.get().info("文件{}第{}块开始复制，开始时间：{}", srcFile.getName(), blockNo, LocalDateTimeUtil.format(bgnDate, "yyyy-MM-dd HH:mm:ss"));
         try {
             RandomAccessFile in = new RandomAccessFile(srcFile, "r");
             RandomAccessFile out = new RandomAccessFile(tagFile, "rw");
@@ -63,18 +65,16 @@ public class CopyFileThread implements Supplier<String> {
             // size当前要处理的字节数，end是结束位置的偏移量，start是开始位置的偏移量
             long size = end - start;
             FileLock lock = outChannel.lock(start, size, false);
-            // 内存映射块大小100m
-            long blockSize = 1024 * 1024 * 100;
             // 计算块数
-            long blockCount = (size + blockSize - 1) / blockSize;
+            long blockCount = (size + MEMORY_MAPPED_BLOCK_SIZE - 1) / MEMORY_MAPPED_BLOCK_SIZE;
             // 从start到end按blockSize分块，得到每块的起始地址和结束地址，并保存在ranges，使用Pair保存
             List<Pair<Long, Long>> ranges = IntStream.range(0, (int) blockCount).parallel().mapToObj(i -> {
-                long start = blockSize * i + this.start;
-                long end = Math.min(start + blockSize, this.end);
+                long start = MEMORY_MAPPED_BLOCK_SIZE * i + this.start;
+                long end = Math.min(start + MEMORY_MAPPED_BLOCK_SIZE, this.end);
                 return Pair.of(start, end);
             }).toList();
             // 缓存区，100m
-            ByteBuffer buffer = ByteBuffer.allocate((int) blockSize);
+            ByteBuffer buffer = ByteBuffer.allocate((int) MEMORY_MAPPED_BLOCK_SIZE);
             // 遍历块，进行并行内存映射，然后复制
             ranges.parallelStream().forEach(range -> {
                 long startPos = range.getKey();
@@ -105,9 +105,7 @@ public class CopyFileThread implements Supplier<String> {
             throw new RuntimeException(e);
         }
         LocalDateTime endDate = LocalDateTime.now();
-        Log.get().info("文件{}第{}块结束复制，结束时间：{}", srcFile.getName(), blockNo,
-                       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(endDate));
-        Duration duration = Duration.between(bgnDate, endDate);
-        return String.format("文件%s第%d块复制成功，耗时：%d秒", srcFile.getName(), blockNo, duration.getSeconds());
+//        Log.get().info("文件{}第{}块结束复制，结束时间：{}，总耗时：{}秒", srcFile.getName(), blockNo, formatter.format(endDate),Duration.between(bgnDate, endDate).getSeconds());
+        return String.format("文件%s第%d块复制成功", srcFile.getName(), blockNo);
     }
 }

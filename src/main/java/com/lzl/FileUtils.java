@@ -89,7 +89,7 @@ public class FileUtils {
                 case COPY -> {
                     List<File> fileList = new ArrayList<>();
                     searchAllFile(file, fileList);
-                    fileList.forEach(f -> {
+                    fileList.parallelStream().forEach(f -> {
                         try {
                             opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
                         } catch (IOException | InterruptedException e) {
