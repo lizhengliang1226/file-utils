@@ -1,9 +1,12 @@
 package com.lzl;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.setting.dialect.Props;
 import cn.hutool.setting.dialect.PropsUtil;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -11,8 +14,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.lzl.Operate.COPY;
 
 /**
  * 文件工具类
@@ -34,7 +35,7 @@ public class FileUtils {
 //    private final VidTransUtil transUtil = new VidTransUtil();
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         FileUtils fileUtils = new FileUtils();
         // 初始化
         fileUtils.init();
@@ -52,10 +53,13 @@ public class FileUtils {
     /**
      * 启动
      */
-    public void start() throws Exception {
+    public void start()  {
         inputOperateInfo();
         while (true) {
-            inputOperateType();
+            boolean b = inputOperateType();
+            if(!b){
+                break;
+            }
             choose(operateInfo.getOperate());
         }
     }
@@ -63,13 +67,13 @@ public class FileUtils {
     /**
      * 选择功能
      */
-    public void choose(Operate opt) throws Exception {
+    public void choose(Operate opt)  {
         if (confirmOperate()) {
             File file = new File(operateInfo.getOptSrcPath());
             switch (opt) {
                 case MOVE -> batchOperate(file, (name) -> false, (f1) -> {
                     try {
-                        Operate.MOVE.getOpt(f1, operateInfo.getOptTargetPath()).invoke();
+                        opt.getOpt(f1, operateInfo.getOptTargetPath()).invoke();
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -79,13 +83,23 @@ public class FileUtils {
                         String name = f1.getName();
                         if (!isContainChinese(name)) {
                             name = getSimpleName(name);
-                            Operate.RENAME.getOpt(f1, name).invoke();
+                            opt.getOpt(f1, name).invoke();
                         }
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 });
-                case COPY -> batchCopyOperate(file,COPY);
+                case COPY -> {
+                    List<File> fileList = new ArrayList<>();
+                    searchAllFile(file, fileList);
+                    fileList.forEach(f -> {
+                        try {
+                            opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
+                        } catch (IOException | InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
                 default -> System.out.println("没有该操作或还没开发！");
             }
         }
@@ -118,24 +132,12 @@ public class FileUtils {
     /**
      * 获取文件扩展名
      *
-     * @param f1
-     * @return
+     * @param file 文件
+     * @return 文件扩展名
      */
-    private static String getFileExt(File f1) {
-        String[] split = f1.getName().split("\\.");
+    private static String getFileExt(File file) {
+        String[] split = file.getName().split("\\.");
         return split[split.length - 1];
-    }
-
-    private void batchCopyOperate(File file,Operate opt) throws InterruptedException {
-        List<File> fileList = new ArrayList<>();
-        searchAllFile(file, fileList);
-        fileList.forEach(f -> {
-            try {
-                opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
     }
 
     private void searchAllFile(File file, List<File> result) {
@@ -156,19 +158,19 @@ public class FileUtils {
     /**
      * 输入操作类型
      */
-    private void inputOperateType() {
+    private boolean inputOperateType() {
         String opt;
         while (true) {
             printOperateTips();
             opt = GlobalConstant.scanner.nextLine();
             if (!opt.matches("\\d+") || Operate.values().length < Integer.parseInt(opt)) {
                 if ("q".equals(opt)) {
-                    exit();
+                    return false;
                 }
                 System.out.println("请输入正确的操作代码，只允许以下操作！");
             } else {
                 operateInfo.setOperate(Operate.getOperateByCode(opt));
-                break;
+                return true;
             }
         }
     }
@@ -204,43 +206,41 @@ public class FileUtils {
      * 输入操作信息
      */
     private void inputOperateInfo() {
-        inputInfo(() -> {
-            System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.curPath + "】)：");
-            String srcPath;
-            srcPath = GlobalConstant.scanner.nextLine();
-            if (isBlank(srcPath)) {
-                srcPath = GlobalConstant.curPath;
-            }
-            return srcPath;
-        }, this::isDir, operateInfo::setOptSrcPath, (path) -> {
-            System.out.println("输入的路径【" + path + "】不存在，请重新输入!");
-        });
-        inputInfo(() -> {
-                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                    String exts = GlobalConstant.scanner.nextLine();
-                    if (isBlank(exts)) {
-                        exts = String.join(",", GlobalConstant.VIDEO_EXTS);
+        inputInfo(
+                () -> {
+                    System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.curPath + "】)：");
+                    String srcPath;
+                    srcPath = GlobalConstant.scanner.nextLine();
+                    if (StrUtil.isBlank(srcPath)) {
+                        srcPath = GlobalConstant.curPath;
                     }
-                    return exts;
-                }, (exts) -> Arrays.stream(exts.split(","))
-                        .filter(GlobalConstant.VIDEO_EXTS::contains).toList().size() > 0,
-                (exts) -> {
-                    exts = Arrays.stream(exts.split(","))
-                            .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
-                    operateInfo.setOptExts(exts.toLowerCase());
-                }, (exts) -> {
-                    System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!");
-                });
+                    return srcPath;
+                },
+                this::isDir,
+                operateInfo::setOptSrcPath,
+                (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
+        inputInfo(() -> {
+                      System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
+                      String exts = GlobalConstant.scanner.nextLine();
+                      if (StrUtil.isBlank(exts)) {
+                          exts = String.join(",", GlobalConstant.VIDEO_EXTS);
+                      }
+                      return exts;
+                  }, (exts) -> Arrays.stream(exts.split(","))
+                                     .filter(GlobalConstant.VIDEO_EXTS::contains).toList().size() > 0,
+                  (exts) -> {
+                      exts = Arrays.stream(exts.split(","))
+                                   .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
+                      operateInfo.setOptExts(exts.toLowerCase());
+                  }, (exts) -> System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!"));
         inputInfo(() -> {
             System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.curPath + "】)：");
             String tagPath = GlobalConstant.scanner.nextLine();
-            if (isBlank(tagPath)) {
+            if (StrUtil.isBlank(tagPath)) {
                 tagPath = GlobalConstant.curPath;
             }
             return tagPath;
-        }, this::isDir, operateInfo::setOptTargetPath, (path) -> {
-            System.out.println("输入的路径【" + path + "】不存在，请重新输入!");
-        });
+        }, this::isDir, operateInfo::setOptTargetPath, (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
     }
 
     /**
@@ -275,20 +275,16 @@ public class FileUtils {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        p.forEach((k, v) -> {
-            replaceMap.put((String) k, (String) v);
-        });
-        props.forEach((k, v) -> {
-            replaceMap.put((String) k, (String) v);
-        });
+        p.forEach((k, v) -> replaceMap.put((String) k, (String) v));
+        props.forEach((k, v) -> replaceMap.put((String) k, (String) v));
     }
 
 
     /**
      * 路径是否是一个文件夹
      *
-     * @param path
-     * @return
+     * @param path 路径
+     * @return 是否为文件夹
      */
     private boolean isDir(String path) {
         File file = new File(path);
@@ -310,7 +306,6 @@ public class FileUtils {
         }
         String ext = name.substring(name.lastIndexOf("."));
         name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
-//        if(name.contains("FC2"))return name+ext;
         Matcher m1 = NORMAL_NAME_REG.matcher(name);
         String id = "";
         while (m1.find()) {
@@ -328,7 +323,6 @@ public class FileUtils {
             id = "FC2-PPV-" + g1;
         }
         name = id;
-//        name = transUtil.transform(name);
         return name + ext;
     }
 
@@ -363,6 +357,6 @@ public class FileUtils {
             System.out.println("请输入正确的选择（y/n）！");
             flag = GlobalConstant.scanner.nextLine();
         }
-        return flag.equals("y");
+        return "y".equals(flag);
     }
 }
