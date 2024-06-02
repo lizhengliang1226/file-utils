@@ -3,6 +3,9 @@ package com.lzl;
 
 import java.util.Arrays;
 
+/**
+ * @author 17314
+ */
 public class ConsoleProgressBar {
 
     public static void printBar(int total, int now) {
@@ -16,7 +19,9 @@ public class ConsoleProgressBar {
         String bar = generateBar(fillNum);
         // 输出
         System.out.printf("\rProgress [%s] %.2f%%", bar, percent);
-        if (fillNum == 100) System.out.println();
+        if (fillNum == 100) {
+            System.out.println();
+        }
     }
 
     public static void printBar(int total, int now, String elapse) {
@@ -30,7 +35,9 @@ public class ConsoleProgressBar {
         String bar = generateBar(fillNum);
         // 输出
         System.out.printf("\rProgress [%s] %.2f%% | elapse: %s", bar, percent, elapse);
-        if (fillNum == 100) System.out.print('\n');
+        if (fillNum == 100) {
+            System.out.print('\n');
+        }
     }
 
     public static String generateBar(int total, int fillNum, char c) {
@@ -45,9 +52,15 @@ public class ConsoleProgressBar {
     }
 
     private static void check(int total, int now) {
-        if (total < now) throw new IllegalArgumentException("total can't smaller than now");
-        if (total < 1) throw new IllegalArgumentException("total can't smaller than 1");
-        if (now < 0) throw new IllegalArgumentException("now can't smaller than 0");
+        if (total < now) {
+            throw new IllegalArgumentException("total can't smaller than now");
+        }
+        if (total < 1) {
+            throw new IllegalArgumentException("total can't smaller than 1");
+        }
+        if (now < 0) {
+            throw new IllegalArgumentException("now can't smaller than 0");
+        }
     }
 
 }

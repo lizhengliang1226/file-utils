@@ -29,10 +29,7 @@ public class FileUtils {
      * 操作信息
      */
     private final OperateInfo operateInfo = new OperateInfo();
-    /**
-     * 番号转换工具
-     */
-//    private final VidTransUtil transUtil = new VidTransUtil();
+    private final Pattern CHINESE_REG = Pattern.compile("[\u4e00-\u9fa5]");
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
     public static void main(String[] args) {
@@ -53,11 +50,11 @@ public class FileUtils {
     /**
      * 启动
      */
-    public void start()  {
+    public void start() {
         inputOperateInfo();
         while (true) {
             boolean b = inputOperateType();
-            if(!b){
+            if (!b) {
                 break;
             }
             choose(operateInfo.getOperate());
@@ -67,7 +64,7 @@ public class FileUtils {
     /**
      * 选择功能
      */
-    public void choose(Operate opt)  {
+    public void choose(Operate opt) {
         if (confirmOperate()) {
             File file = new File(operateInfo.getOptSrcPath());
             switch (opt) {
@@ -162,7 +159,7 @@ public class FileUtils {
         String opt;
         while (true) {
             printOperateTips();
-            opt = GlobalConstant.scanner.nextLine();
+            opt = GlobalConstant.SCANNER.nextLine();
             if (!opt.matches("\\d+") || Operate.values().length < Integer.parseInt(opt)) {
                 if ("q".equals(opt)) {
                     return false;
@@ -208,11 +205,11 @@ public class FileUtils {
     private void inputOperateInfo() {
         inputInfo(
                 () -> {
-                    System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.curPath + "】)：");
+                    System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
                     String srcPath;
-                    srcPath = GlobalConstant.scanner.nextLine();
+                    srcPath = GlobalConstant.SCANNER.nextLine();
                     if (StrUtil.isBlank(srcPath)) {
-                        srcPath = GlobalConstant.curPath;
+                        srcPath = GlobalConstant.CUR_PATH;
                     }
                     return srcPath;
                 },
@@ -221,7 +218,7 @@ public class FileUtils {
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
         inputInfo(() -> {
                       System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                      String exts = GlobalConstant.scanner.nextLine();
+                      String exts = GlobalConstant.SCANNER.nextLine();
                       if (StrUtil.isBlank(exts)) {
                           exts = String.join(",", GlobalConstant.VIDEO_EXTS);
                       }
@@ -234,10 +231,10 @@ public class FileUtils {
                       operateInfo.setOptExts(exts.toLowerCase());
                   }, (exts) -> System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!"));
         inputInfo(() -> {
-            System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.curPath + "】)：");
-            String tagPath = GlobalConstant.scanner.nextLine();
+            System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
+            String tagPath = GlobalConstant.SCANNER.nextLine();
             if (StrUtil.isBlank(tagPath)) {
-                tagPath = GlobalConstant.curPath;
+                tagPath = GlobalConstant.CUR_PATH;
             }
             return tagPath;
         }, this::isDir, operateInfo::setOptTargetPath, (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
@@ -330,8 +327,7 @@ public class FileUtils {
      * 判断是否包含中文
      */
     public boolean isContainChinese(String str) {
-        Pattern p = Pattern.compile("[\u4e00-\u9fa5]");
-        Matcher m = p.matcher(str);
+        Matcher m = CHINESE_REG.matcher(str);
         return m.find();
     }
 
@@ -352,10 +348,10 @@ public class FileUtils {
         System.out.println(operateInfo.getOperate().getDesc() + "操作=>文件目标目录：" + operateInfo.getOptTargetPath());
         System.out.println(operateInfo.getOperate().getDesc() + "操作=>文件扩展名：" + operateInfo.getOptExts());
         System.out.println("以上信息是否正确，确定执行操作吗？(y/n)");
-        String flag = GlobalConstant.scanner.nextLine();
+        String flag = GlobalConstant.SCANNER.nextLine();
         while (!"y".equals(flag) && !"n".equals(flag)) {
             System.out.println("请输入正确的选择（y/n）！");
-            flag = GlobalConstant.scanner.nextLine();
+            flag = GlobalConstant.SCANNER.nextLine();
         }
         return "y".equals(flag);
     }

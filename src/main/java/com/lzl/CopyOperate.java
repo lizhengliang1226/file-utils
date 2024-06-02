@@ -21,7 +21,7 @@ import java.util.stream.IntStream;
  * @version 1.0
  * @since 2024/6/2
  */
-public class CopyOperate implements FileOperate{
+public class CopyOperate implements FileOperate {
     /**
      * 块大小，1g
      */
@@ -34,58 +34,52 @@ public class CopyOperate implements FileOperate{
                                                                    60,
                                                                    TimeUnit.SECONDS,
                                                                    new LinkedBlockingDeque<>(),
-                                                            r -> new Thread(r, "copy-worker"));
+                                                                   r -> new Thread(r, "copy-worker"));
 
-    public CopyOperate(File file, Object...args) {
-        this.srcFile=file;
-        this.args=args;
+    public CopyOperate(File file, Object... args) {
+        this.srcFile = file;
+        this.args = args;
     }
 
     @Override
     public void invoke() {
-        String tagPath = String.valueOf(args[0]);
-        String name = srcFile.getName();
-        Log.get().info("【" + name + "】开始复制！");
-        LocalDateTime bgn = LocalDateTime.now();
-        Log.get().info("开始复制时间{}", bgn.format(formatter));
-        Path directories = null;
         try {
+            String tagPath = String.valueOf(args[0]);
+            String name = srcFile.getName();
+            Log.get().info("【" + name + "】开始复制！");
+            LocalDateTime bgn = LocalDateTime.now();
+            Log.get().info("开始复制时间{}", bgn.format(formatter));
+            Path directories;
             directories = Files.createDirectories(Paths.get(tagPath));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        Path resolve = directories.resolve(name);
-        if (Files.notExists(resolve)) {
-            try {
+            Path resolve = directories.resolve(name);
+            if (Files.notExists(resolve)) {
                 Files.createFile(resolve);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
-        }
-        File tagFile = resolve.toFile();
-        long length = srcFile.length();// 12100
-        // 计算块数
-        long blockCount = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        String fileSize = Math.scalb((float) length / 1024 / 1024, 2) + "M";
-        Log.get().info("文件大小{}，分块数{}", fileSize, blockCount);
-        List<Future<String>> tasks = IntStream.range(0, (int) blockCount).mapToObj(blockIndex -> {
-            long start = (long) BLOCK_SIZE * blockIndex;
-            long end = Math.min(start + BLOCK_SIZE, length);
-            CopyFileThread task = new CopyFileThread(srcFile, tagFile, start, end, blockIndex);
-            Log.get().info("分块{}，起始{}-结束{}", blockIndex, start, end);
-            return pool.submit(task);
-        }).toList();
-        for (Future<String> task : tasks) {
-            try {
+            File tagFile = resolve.toFile();
+            long length = srcFile.length();
+            // 计算块数
+            long blockCount = (length + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            String fileSize = Math.scalb((float) length / 1024 / 1024, 2) + "M";
+            Log.get().info("文件大小{}，分块数{}", fileSize, blockCount);
+            List<Future<String>> tasks = IntStream.range(0, (int) blockCount).mapToObj(blockIndex -> {
+                long start = (long) BLOCK_SIZE * blockIndex;
+                long end = Math.min(start + BLOCK_SIZE, length);
+                CopyFileThread task = new CopyFileThread(srcFile, tagFile, start, end, blockIndex);
+                Log.get().info("分块{}，起始{}-结束{}", blockIndex, start, end);
+                return pool.submit(task);
+            }).toList();
+            for (Future<String> task : tasks) {
                 String s = task.get();
                 Log.get().info(s);
-            } catch (ExecutionException | InterruptedException e) {
-                throw new RuntimeException(e);
             }
+            LocalDateTime end = LocalDateTime.now();
+            Log.get().info("结束复制时间{}", end.format(formatter));
+            Duration duration = Duration.between(bgn, end);
+            Log.get().info("总耗时{}秒", duration.getSeconds());
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.get().error("文件复制发生了异常，异常信息：{}", e.getMessage());
         }
-        LocalDateTime end = LocalDateTime.now();
-        Log.get().info("结束复制时间{}", end.format(formatter));
-        Duration duration = Duration.between(bgn, end);
-        Log.get().info("总耗时{}秒", duration.getSeconds());
+
     }
 }
