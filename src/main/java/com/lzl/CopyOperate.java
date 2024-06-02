@@ -3,7 +3,6 @@ package com.lzl;
 import cn.hutool.log.Log;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,7 +10,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 /**
@@ -78,7 +80,7 @@ public class CopyOperate implements FileOperate {
             Log.get().info("总耗时{}秒", duration.getSeconds());
         } catch (Exception e) {
             e.printStackTrace();
-            Log.get().error("文件复制发生了异常，异常信息：{}", e.getMessage());
+            Log.get().error("文件{}复制发生了异常，异常信息：{}", srcFile.getName(),e.getMessage());
         }
 
     }
