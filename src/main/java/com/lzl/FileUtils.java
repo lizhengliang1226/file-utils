@@ -29,7 +29,7 @@ public class FileUtils {
      * 操作信息
      */
     private final OperateInfo operateInfo = new OperateInfo();
-    private final Pattern CHINESE_REG = Pattern.compile("[\u4e00-\u9fa5]");
+    private final Pattern CHINESE_REG = Pattern.compile("[一-龥]");
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
     public static void main(String[] args) {
@@ -195,10 +195,6 @@ public class FileUtils {
         System.out.println("+" + "-".repeat(60) + "+");
     }
 
-    private void exit() {
-        System.exit(-1);
-    }
-
     /**
      * 输入操作信息
      */
@@ -218,18 +214,18 @@ public class FileUtils {
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
         inputInfo(() -> {
                     System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                    String exts = GlobalConstant.SCANNER.nextLine();
-                    if (StrUtil.isBlank(exts)) {
-                        exts = String.join(",", GlobalConstant.VIDEO_EXTS);
+                    String extensions = GlobalConstant.SCANNER.nextLine();
+                    if (StrUtil.isBlank(extensions)) {
+                        extensions = String.join(",", GlobalConstant.VIDEO_EXTS);
                     }
-                    return exts;
-                }, (exts) -> !Arrays.stream(exts.split(","))
+                    return extensions;
+                }, (extensions) -> !Arrays.stream(extensions.split(","))
                         .filter(GlobalConstant.VIDEO_EXTS::contains).toList().isEmpty(),
-                (exts) -> {
-                    exts = Arrays.stream(exts.split(","))
+                (extensions) -> {
+                    extensions = Arrays.stream(extensions.split(","))
                             .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
-                    operateInfo.setOptExts(exts.toLowerCase());
-                }, (exts) -> System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!"));
+                    operateInfo.setOptExts(extensions.toLowerCase());
+                }, (extensions) -> System.out.println("输入的扩展名【" + extensions + "】不合法，请重新输入!"));
         inputInfo(() -> {
             System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
             String tagPath = GlobalConstant.SCANNER.nextLine();
@@ -312,7 +308,7 @@ public class FileUtils {
         return name + ext;
     }
 
-    private static String getId(String name) {
+    public String getId(String name) {
         Matcher m1 = NORMAL_NAME_REG.matcher(name);
         String id = "";
         while (m1.find()) {
@@ -338,15 +334,6 @@ public class FileUtils {
     public boolean isContainChinese(String str) {
         Matcher m = CHINESE_REG.matcher(str);
         return m.find();
-    }
-
-
-    public boolean isBlank(CharSequence str) {
-        return str == null || str.toString().trim().length() == 0;
-    }
-
-    public boolean isNotBlank(CharSequence str) {
-        return !isBlank(str);
     }
 
     /**
