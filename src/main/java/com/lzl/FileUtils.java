@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * @since 2022/8/14-23:33
  */
 public class FileUtils {
-    private static final Pattern NORMAL_NAME_REG = Pattern.compile("([a-zA-Z]{2,5})[-_](\\d{3,4})");
+    private static final Pattern NORMAL_NAME_REG = Pattern.compile("([a-zA-Z]{2,5})[-_](\\d{3,5})");
     private static final Pattern FC2_NAME_REG = Pattern.compile("[Ff][Cc]2[-_]*(?:[Pp]{2}[Vv])*[-_](\\d{7})");
     /**
      * 操作信息
@@ -217,19 +217,19 @@ public class FileUtils {
                 operateInfo::setOptSrcPath,
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
         inputInfo(() -> {
-                      System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                      String exts = GlobalConstant.SCANNER.nextLine();
-                      if (StrUtil.isBlank(exts)) {
-                          exts = String.join(",", GlobalConstant.VIDEO_EXTS);
-                      }
-                      return exts;
-                  }, (exts) -> Arrays.stream(exts.split(","))
-                                     .filter(GlobalConstant.VIDEO_EXTS::contains).toList().size() > 0,
-                  (exts) -> {
-                      exts = Arrays.stream(exts.split(","))
-                                   .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
-                      operateInfo.setOptExts(exts.toLowerCase());
-                  }, (exts) -> System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!"));
+                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
+                    String exts = GlobalConstant.SCANNER.nextLine();
+                    if (StrUtil.isBlank(exts)) {
+                        exts = String.join(",", GlobalConstant.VIDEO_EXTS);
+                    }
+                    return exts;
+                }, (exts) -> !Arrays.stream(exts.split(","))
+                        .filter(GlobalConstant.VIDEO_EXTS::contains).toList().isEmpty(),
+                (exts) -> {
+                    exts = Arrays.stream(exts.split(","))
+                            .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
+                    operateInfo.setOptExts(exts.toLowerCase());
+                }, (exts) -> System.out.println("输入的扩展名【" + exts + "】不合法，请重新输入!"));
         inputInfo(() -> {
             System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
             String tagPath = GlobalConstant.SCANNER.nextLine();
@@ -303,6 +303,16 @@ public class FileUtils {
         }
         String ext = name.substring(name.lastIndexOf("."));
         name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
+        String id = getId(name);
+        if (id.length() >= 6 && id.length() <= 15) {
+            name = id;
+        } else {
+            System.out.println("id长度不符合要求，将使用原文件名，请检查文件：" + name);
+        }
+        return name + ext;
+    }
+
+    private static String getId(String name) {
         Matcher m1 = NORMAL_NAME_REG.matcher(name);
         String id = "";
         while (m1.find()) {
@@ -319,8 +329,7 @@ public class FileUtils {
             String g1 = m2.group(1);
             id = "FC2-PPV-" + g1;
         }
-        name = id;
-        return name + ext;
+        return id;
     }
 
     /**
