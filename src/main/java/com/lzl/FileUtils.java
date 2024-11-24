@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  */
 public class FileUtils {
     private static final Pattern NORMAL_NAME_REG = Pattern.compile("([a-zA-Z]{2,5})[-_](\\d{3,5})");
-    private static final Pattern FC2_NAME_REG = Pattern.compile("[Ff][Cc]2[-_]*(?:[Pp]{2}[Vv])*[-_](\\d{7})");
+    private static final Pattern FC2_NAME_REG = Pattern.compile("[Ff][Cc]2[-_]*(?:[Pp]{2}[Vv])*[-_](\\d{6,7})");
     /**
      * 操作信息
      */
@@ -119,7 +119,7 @@ public class FileUtils {
                 }
             } else {
                 String fileExt = getFileExt(f1);
-                if (operateInfo.getOptExts().contains(fileExt)) {
+                if (operateInfo.getOptExts().contains(fileExt.toLowerCase())) {
                     opt.accept(f1);
                 }
             }
@@ -145,7 +145,7 @@ public class FileUtils {
                 searchAllFile(f1, result);
             } else {
                 String fileExt = getFileExt(f1);
-                if (operateInfo.getOptExts().contains(fileExt)) {
+                if (operateInfo.getOptExts().contains(fileExt.toLowerCase())) {
                     result.add(f1);
                 }
             }
@@ -300,7 +300,7 @@ public class FileUtils {
         String ext = name.substring(name.lastIndexOf("."));
         name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
         String id = getId(name);
-        if (id.length() >= 6 && id.length() <= 15) {
+        if (id.length() >= 6) {
             name = id;
         } else {
             System.out.println("id长度不符合要求，将使用原文件名，请检查文件：" + name);
@@ -323,7 +323,8 @@ public class FileUtils {
         Matcher m2 = FC2_NAME_REG.matcher(name);
         while (m2.find()) {
             String g1 = m2.group(1);
-            id = "FC2-PPV-" + g1;
+            int end = m2.end(1);
+            id = "FC2-PPV-" + g1 + name.substring(end);
         }
         return id;
     }
