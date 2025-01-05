@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<movie>
+  <plot><![CDATA[#desc#]]></plot>
+  <outline><![CDATA[发行日期 2024-03-06]]></outline>
+  <customrating>JP-18+</customrating>
+  <lockdata>false</lockdata>
+  <dateadded>2024-03-16 00:02:23</dateadded>
+  <title>#title#</title>
+  <originaltitle>#title#</originaltitle>
+  <actor>
+    <name>#actor#</name>
+    <type>Actor</type>
+  </actor>
+  <rating>5.0</rating>
+  <year>年份 2024</year>
+  <sorttitle>#title#</sorttitle>
+  <mpaa>JP-18+</mpaa>
+  <countrycode>JP</countrycode>
+  <premiered>2024-03-06</premiered>
+  <releasedate>2024-03-06</releasedate>
+  <criticrating>41</criticrating>
+  <runtime>64</runtime>
+  <tagline>发行日期 2024-03-06</tagline>
+  <genre>AVC1</genre>
+  <genre>720P</genre>
+  <genre>MLA</genre>
+
+  <tag>AVC1</tag>
+  <tag>720P</tag>
+  <tag>MLA</tag>
+
+  <fileinfo>
+    <streamdetails>
+      <video>
+        <codec>h264</codec>
+        <micodec>h264</micodec>
+        <bitrate>4001641</bitrate>
+        <width>1280</width>
+        <height>720</height>
+        <aspect>16:9</aspect>
+        <aspectratio>16:9</aspectratio>
+        <framerate>29.97003</framerate>
+        <language>und</language>
+        <scantype>progressive</scantype>
+        <default>True</default>
+        <forced>False</forced>
+        <duration>64</duration>
+        <durationinseconds>3868</durationinseconds>
+      </video>
+      <audio>
+        <codec>aac</codec>
+        <micodec>aac</micodec>
+        <bitrate>125588</bitrate>
+        <language>und</language>
+        <scantype>progressive</scantype>
+        <channels>2</channels>
+        <samplingrate>44100</samplingrate>
+        <default>True</default>
+        <forced>False</forced>
+      </audio>
+    </streamdetails>
+  </fileinfo>
+  <originalplot><![CDATA[#desc#]]></originalplot>
+  <release>2024-03-06</release>
+  <num>#id#</num>
+  <votes>390</votes>
+  <maker>制作商xxx</maker>
+  <publisher>发行商xxx</publisher>
+  <label>标签xxx</label>
+  <javdbid>uuid</javdbid>
+</movie>

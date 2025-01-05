@@ -97,6 +97,13 @@ public class FileUtils {
                         }
                     });
                 }
+                case CREATE_NFO -> batchOperate(file, (name) -> false, (f1) -> {
+                    try {
+                        opt.getOpt(f1, "未知演员",operateInfo.getOptTargetPath()).invoke();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
                 default -> System.out.println("没有该操作或还没开发！");
             }
         }
@@ -266,7 +273,7 @@ public class FileUtils {
         try {
             p.load(new FileInputStream(filePath));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("外部替换配置未找到，使用默认配置");
         }
         p.forEach((k, v) -> replaceMap.put((String) k, (String) v));
         props.forEach((k, v) -> replaceMap.put((String) k, (String) v));
