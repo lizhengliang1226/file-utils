@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 /**
  * @author LZL
  * @version v1.0
- * @date 2023/4/16-17:59
+ * @since 2023/4/16-17:59
  */
 public class CopyFileThread implements Supplier<String> {
     private final File srcFile;

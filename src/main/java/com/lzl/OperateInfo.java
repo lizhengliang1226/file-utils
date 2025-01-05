@@ -5,7 +5,7 @@ package com.lzl;
  *
  * @author LZL
  * @version v1.0
- * @date 2023/4/16-21:06
+ * @since 2023/4/16-21:06
  */
 public class OperateInfo {
     private String optSrcPath;

@@ -1,11 +1,11 @@
 package com.lzl;
 
 /**
- * ${description}
+ * 入口类
  *
  * @author LZL
  * @version v1.0
- * @date ${DATE}-${TIME}
+ * @since 2025/01/01
  */
 public class Main {
     public static void main(String[] args) throws Exception {

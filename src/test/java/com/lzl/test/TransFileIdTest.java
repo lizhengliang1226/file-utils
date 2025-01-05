@@ -67,4 +67,10 @@ public class TransFileIdTest {
         String id = fileUtils.getId(name);
         assertEquals("FC2-PPV-8789875", id);
     }
+    @Test
+    public void t1estGet1Id_NonMatchingPatterns_ReturnsEmptyId() {
+        String name = "FC2-8789875";
+//        fileUtils.initNfoTemplate();
+//        assertEquals("FC2-PPV-8789875", id);
+    }
 }

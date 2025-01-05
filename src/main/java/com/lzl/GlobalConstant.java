@@ -7,7 +7,7 @@ import java.util.Scanner;
 /**
  * @author LZL
  * @version v1.0
- * @date 2023/4/16-15:58
+ * @since 2023/4/16
  */
 public class GlobalConstant {
     public static final Scanner SCANNER = new Scanner(System.in);

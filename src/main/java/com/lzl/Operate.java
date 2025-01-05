@@ -11,13 +11,12 @@ import java.util.Map;
  *
  * @author LZL
  * @version v1.0
- * @date 2023/4/16-21:05
+ * @since 2023/4/16-21:05
  */
 public enum Operate {
-
     MOVE("1", "move") {
         @Override
-        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+        FileOperate getOpt(File file, Object... args) {
             return () -> {
                 String name = file.getName();
                 System.out.print("【" + name + "】开始移动！\t");
@@ -27,7 +26,7 @@ public enum Operate {
         }
     }, DELETE("2", "delete") {
         @Override
-        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+        FileOperate getOpt(File file, Object... args) {
             return () -> {
                 System.out.print("【" + file.getName() + "】开始删除！\t");
                 file.delete();
@@ -36,7 +35,7 @@ public enum Operate {
         }
     }, RENAME("3", "rename") {
         @Override
-        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+        FileOperate getOpt(File file, Object... args) {
             return () -> {
                 System.out.print("【" + file.getName() + "】开始重命名！\t");
                 boolean b = file.renameTo(new File(file.getParent() + "\\" + args[0]));
@@ -45,12 +44,12 @@ public enum Operate {
         }
     }, COPY("4", "copy") {
         @Override
-        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+        FileOperate getOpt(File file, Object... args) {
             return new CopyOperate(file, args);
         }
     }, CREATE_NFO("5", "create nfo") {
         @Override
-        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+        FileOperate getOpt(File file, Object... args) {
             return new CreateNfoOperate(file, args);
         }
     };
@@ -98,17 +97,4 @@ public enum Operate {
     public void setDesc(String desc) {
         this.desc = desc;
     }
-
-
-    public static void main(String[] args) {
-        try {
-            FileOperate opt = COPY.getOpt(new File("D:\\SystemResources\\a.txt"), "D:\\SystemResources\\1");
-            opt.invoke();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
 }

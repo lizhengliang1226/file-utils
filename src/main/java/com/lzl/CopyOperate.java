@@ -33,12 +33,8 @@ public class CopyOperate implements FileOperate {
     private final File srcFile;
     private final Object[] args;
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private final ThreadPoolExecutor pool = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors() * 2,
-                                                                   32,
-                                                                   60,
-                                                                   TimeUnit.SECONDS,
-                                                                   new LinkedBlockingDeque<>(),
-                                                                   r -> new Thread(r, "copy-worker"));
+    private final ThreadPoolExecutor pool = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors() * 2, 32,
+            60, TimeUnit.SECONDS, new LinkedBlockingDeque<>(), r -> new Thread(r, "copy-worker"));
 
     public CopyOperate(File file, Object... args) {
         this.srcFile = file;
@@ -57,9 +53,8 @@ public class CopyOperate implements FileOperate {
             // 计算每块的开始地址和结束地址，存储在List<Pair>中
             List<Pair<Long, Long>> blockRangePairs = getBlockRangePairs();
             // 并行遍历每块，并异步执行
-            List<CompletableFuture<String>> tasks = blockRangePairs.parallelStream()
-                                                                   .map(pair -> runTaskAsync(tagFile, blockRangePairs.indexOf(pair), pair))
-                                                                   .toList();
+            List<CompletableFuture<String>> tasks = blockRangePairs.parallelStream().map(pair -> runTaskAsync(tagFile,
+                    blockRangePairs.indexOf(pair), pair)).toList();
             CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).thenAccept((i) -> {
                 whenAllTaskComplate(name, bgn);
             });
@@ -77,10 +72,7 @@ public class CopyOperate implements FileOperate {
         pool.shutdown();
     }
 
-    private CompletableFuture<String> runTaskAsync(
-            File tagFile,
-            int blockNo,
-            Pair<Long, Long> pair) {
+    private CompletableFuture<String> runTaskAsync(File tagFile, int blockNo, Pair<Long, Long> pair) {
         long start = pair.getKey();
         long end = pair.getValue();
 //        int blockNo = blockRangePairs.indexOf(pair);
@@ -120,6 +112,6 @@ public class CopyOperate implements FileOperate {
 
     public static void main(String[] args) {
         new CopyOperate(new File("F:\\0ad403fe-fca2-4891-b124-3153b9b2947e\\TEMP\\MIDV-739.mp4"),
-                        "F:\\0ad403fe-fca2-4891-b124-3153b9b2947e\\TEMP\\1").invoke();
+                "F:\\0ad403fe-fca2-4891-b124-3153b9b2947e\\TEMP\\1").invoke();
     }
 }
