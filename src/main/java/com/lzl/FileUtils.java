@@ -336,6 +336,11 @@ public class FileUtils {
             String g1 = m2.group(1);
             int end = m2.end(1);
             id = "FC2-" + g1 + name.substring(end);
+            if (name.endsWith("CD1") || name.endsWith("CD2") || name.endsWith("CD3") || name.endsWith(
+                    "CD4") || name.endsWith("SP") || name.endsWith("_1") || name.endsWith("_2") || name.endsWith(
+                    "_3") || name.endsWith("_4")) {
+                id = id + name.substring(name.indexOf(g1) + g1.length());
+            }
         }
         return id;
     }
