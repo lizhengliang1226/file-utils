@@ -37,9 +37,16 @@ public enum Operate {
         @Override
         FileOperate getOpt(File file, Object... args) {
             return () -> {
-                System.out.print("【" + file.getName() + "】开始重命名！\t");
-                boolean b = file.renameTo(new File(file.getParent() + "\\" + args[0]));
-                System.out.println("重命名成功！");
+                File dest = new File(file.getParent() + "\\" + args[0]);
+                System.out.printf("重命名【%s】===>【%s】\t",file.getName(),dest.getName());
+                boolean b = file.renameTo(dest);
+                if (!b) {
+                    System.out.printf("重命名失败！请检查当前文件【%s】的待重命名的文件【%s】是否已存在，存在请视情况删除！\n",
+                            file.getName(),
+                            dest.getName());
+                } else {
+                    System.out.println("重命名成功！");
+                }
             };
         }
     }, COPY("4", "copy") {

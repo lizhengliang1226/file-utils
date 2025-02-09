@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
  * @since 2022/8/14-23:33
  */
 public class FileUtils {
-    private static final Pattern NORMAL_NAME_REG = Pattern.compile("([a-zA-Z]{2,5})[-_](\\d{3,5})");
-    private static final Pattern FC2_NAME_REG = Pattern.compile("[Ff][Cc]2[-_]*(?:[Pp]{2}[Vv])*[-_](\\d{6,7})");
+    private static final Pattern NORMAL_NAME_REG = Pattern.compile("([A-Z]{2,5})[-_](\\d{3,5})");
+    private static final Pattern FC2_NAME_REG = Pattern.compile("FC2[-_]?(?:P{2}V)?[-_]*(\\d{6,7})");
     /**
      * 操作信息
      */
@@ -66,16 +66,16 @@ public class FileUtils {
      */
     public void choose(Operate opt) {
         if (confirmOperate()) {
-            File file = new File(operateInfo.getOptSrcPath());
+            File srcPath = new File(operateInfo.getOptSrcPath());
             switch (opt) {
-                case MOVE -> batchOperate(file, (name) -> false, (f1) -> {
+                case MOVE -> batchOperate(srcPath, (name) -> false, (f1) -> {
                     try {
                         opt.getOpt(f1, operateInfo.getOptTargetPath()).invoke();
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
                 });
-                case RENAME -> batchOperate(file, (name) -> name.matches("^\\d+_.*"), (f1) -> {
+                case RENAME -> batchOperate(srcPath, (name) -> name.matches("^\\d+_.*"), (f1) -> {
                     try {
                         String name = f1.getName();
                         if (!isContainChinese(name)) {
@@ -88,7 +88,7 @@ public class FileUtils {
                 });
                 case COPY -> {
                     List<File> fileList = new ArrayList<>();
-                    searchAllFile(file, fileList);
+                    searchAllFile(srcPath, fileList);
                     fileList.parallelStream().forEach(f -> {
                         try {
                             opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
@@ -97,9 +97,9 @@ public class FileUtils {
                         }
                     });
                 }
-                case CREATE_NFO -> batchOperate(file, (name) -> false, (f1) -> {
+                case CREATE_NFO -> batchOperate(srcPath, (name) -> false, (f1) -> {
                     try {
-                        opt.getOpt(f1, "未知演员",operateInfo.getOptTargetPath()).invoke();
+                        opt.getOpt(f1, "未知演员", operateInfo.getOptTargetPath()).invoke();
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -220,27 +220,29 @@ public class FileUtils {
                 operateInfo::setOptSrcPath,
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
         inputInfo(() -> {
-                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",", GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
+                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",",
+                            GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
                     String extensions = GlobalConstant.SCANNER.nextLine();
                     if (StrUtil.isBlank(extensions)) {
                         extensions = String.join(",", GlobalConstant.VIDEO_EXTS);
                     }
                     return extensions;
                 }, (extensions) -> !Arrays.stream(extensions.split(","))
-                        .filter(GlobalConstant.VIDEO_EXTS::contains).toList().isEmpty(),
+                                          .filter(GlobalConstant.VIDEO_EXTS::contains).toList().isEmpty(),
                 (extensions) -> {
                     extensions = Arrays.stream(extensions.split(","))
-                            .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
+                                       .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
                     operateInfo.setOptExts(extensions.toLowerCase());
                 }, (extensions) -> System.out.println("输入的扩展名【" + extensions + "】不合法，请重新输入!"));
         inputInfo(() -> {
-            System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
-            String tagPath = GlobalConstant.SCANNER.nextLine();
-            if (StrUtil.isBlank(tagPath)) {
-                tagPath = GlobalConstant.CUR_PATH;
-            }
-            return tagPath;
-        }, this::isDir, operateInfo::setOptTargetPath, (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
+                    System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
+                    String tagPath = GlobalConstant.SCANNER.nextLine();
+                    if (StrUtil.isBlank(tagPath)) {
+                        tagPath = GlobalConstant.CUR_PATH;
+                    }
+                    return tagPath;
+                }, this::isDir, operateInfo::setOptTargetPath,
+                (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
     }
 
     /**
@@ -267,7 +269,8 @@ public class FileUtils {
     private void initReplaceMap() {
         Props props = PropsUtil.get("config/replace.txt");
         Properties p = new Properties();
-        String jarDir = new File(this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent();
+        String jarDir = new File(
+                this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent();
         // 构建文件路径
         String filePath = jarDir + File.separator + "replace.txt";
         try {
@@ -304,13 +307,14 @@ public class FileUtils {
             String v = entry.getValue();
             name = name.replace(k, v);
         }
+        name = name.strip();
         String ext = name.substring(name.lastIndexOf("."));
         name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
         String id = getId(name);
         if (id.length() >= 6) {
             name = id;
         } else {
-            System.out.println("id长度不符合要求，将使用原文件名，请检查文件：" + name);
+            System.out.printf("id:[%s]长度不符合要求，将使用原文件名，请检查文件：%s\n", id, name);
         }
         return name + ext;
     }
@@ -331,7 +335,7 @@ public class FileUtils {
         while (m2.find()) {
             String g1 = m2.group(1);
             int end = m2.end(1);
-            id = "FC2-PPV-" + g1 + name.substring(end);
+            id = "FC2-" + g1 + name.substring(end);
         }
         return id;
     }

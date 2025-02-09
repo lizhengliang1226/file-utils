@@ -1,6 +1,8 @@
 package com.lzl;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.resource.Resource;
+import cn.hutool.core.io.resource.ResourceUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -19,6 +21,7 @@ public class TemplateConstant {
     public static final String TEMPLATE;
 
     static {
-        TEMPLATE = FileUtil.readString("template/nfo-template.xml", StandardCharsets.UTF_8);
+        Resource resourceObj = ResourceUtil.getResourceObj("template/nfo-template.xml");
+        TEMPLATE = FileUtil.readString(resourceObj.getUrl(), StandardCharsets.UTF_8);
     }
 }
