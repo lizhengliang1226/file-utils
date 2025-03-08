@@ -9,5 +9,5 @@ package com.lzl;
  */
 @FunctionalInterface
 public interface FileOperate {
-    void invoke();
+    Result invoke();
 }

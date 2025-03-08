@@ -23,7 +23,7 @@ public class CreateNfoOperate implements FileOperate {
     }
 
     @Override
-    public void invoke() {
+    public Result invoke() {
         try {
             String name = srcFile.getName();
             String id = name.substring(0, name.lastIndexOf("."));
@@ -45,6 +45,7 @@ public class CreateNfoOperate implements FileOperate {
                     StandardOpenOption.TRUNCATE_EXISTING);
             boolean b = srcFile.renameTo(createPath.resolve(name).toFile());
             System.out.println("创建NFO成功！");
+            return Result.success();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

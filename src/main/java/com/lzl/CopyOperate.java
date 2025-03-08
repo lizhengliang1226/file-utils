@@ -42,7 +42,7 @@ public class CopyOperate implements FileOperate {
     }
 
     @Override
-    public void invoke() {
+    public Result invoke() {
         try {
             String tagPath = String.valueOf(args[0]);
             String name = srcFile.getName();
@@ -58,10 +58,12 @@ public class CopyOperate implements FileOperate {
             CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).thenAccept((i) -> {
                 whenAllTaskComplate(name, bgn);
             });
+            return Result.success();
         } catch (Exception e) {
             e.printStackTrace();
             Log.get().error("文件{}复制发生了异常，异常信息：{}", srcFile.getName(), e.getMessage());
         }
+        return Result.fail();
     }
 
     private void whenAllTaskComplate(String name, LocalDateTime bgn) {

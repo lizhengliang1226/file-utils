@@ -1,5 +1,7 @@
 package com.lzl;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.setting.dialect.Props;
 import cn.hutool.setting.dialect.PropsUtil;
@@ -7,6 +9,8 @@ import cn.hutool.setting.dialect.PropsUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -45,6 +49,33 @@ public class FileUtils {
      */
     public void init() {
         initReplaceMap();
+        initRollBackMap();
+    }
+
+    private Properties props = null;
+    String jarDir = URLDecoder.decode(new File(
+                    this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent(),
+            StandardCharsets.UTF_8);
+
+    private void initRollBackMap() {
+        Properties internalProp = new Properties();
+        try {
+            internalProp.load(ResourceUtil.getReader("config/rollback.properties", StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        props = internalProp;
+        // 构建文件路径
+        String filePath = jarDir + File.separator + "rollback.properties";
+        Properties externalProp = new Properties();
+        try {
+            externalProp.load(new FileInputStream(filePath));
+        } catch (IOException e) {
+            System.out.println(jarDir + "下未读取到原生恢复配置");
+        }
+        internalProp.forEach((k, v) -> rollbackMap.putIfAbsent(Objects.toString(k), Objects.toString(v)));
+        externalProp.forEach((k, v) -> rollbackMap.putIfAbsent(Objects.toString(k), Objects.toString(v)));
+
     }
 
     /**
@@ -80,7 +111,14 @@ public class FileUtils {
                         String name = f1.getName();
                         if (!isContainChinese(name)) {
                             name = getSimpleName(name);
-                            opt.getOpt(f1, name).invoke();
+                            Result res = opt.getOpt(f1, name).invoke();
+                            if (res.isSuccess()) {
+                                rollbackMap.putIfAbsent(name, f1.getName());
+                                // 写入日志，记录
+                                FileUtil.appendString(String.format("%s=%s\n", name, f1.getName()),
+                                        new File(jarDir + File.separator + "rollback.properties"),
+                                        StandardCharsets.UTF_8);
+                            }
                         }
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
@@ -104,6 +142,34 @@ public class FileUtils {
                         throw new RuntimeException(e);
                     }
                 });
+                case ROLLBACK_FILE_NAME -> {
+                    initRollBackMap();
+                    if (rollbackMap.isEmpty()) {
+                        System.out.println("没有可恢复的文件名，请检查！");
+                        return;
+                    }
+                    batchOperate(srcPath, (name) -> name.matches("^\\d+_.*"), (f1) -> {
+                        try {
+                            String name = f1.getName();
+                            if (rollbackMap.containsKey(name)) {
+                                Result res = opt.getOpt(f1, rollbackMap.get(name)).invoke();
+                                if (res.isSuccess()) {
+                                    rollbackMap.remove(name);
+                                    props.remove(name);
+                                }
+                            }
+                        } catch (IOException | InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                    FileUtil.writeString("", new File(jarDir + File.separator + "rollback.properties"),
+                            StandardCharsets.UTF_8);
+                    for (Map.Entry<Object, Object> e : props.entrySet()) {
+                        FileUtil.appendString(String.format("%s=%s\n", e.getKey(), e.getValue()),
+                                new File(jarDir + File.separator + "rollback.properties"),
+                                StandardCharsets.UTF_8);
+                    }
+                }
                 default -> System.out.println("没有该操作或还没开发！");
             }
         }
@@ -319,9 +385,29 @@ public class FileUtils {
         return name + ext;
     }
 
+    private final Map<String, String> rollbackMap = new HashMap<>();
+
     public String getId(String name) {
+        String upperName = name.toUpperCase();
+        List<String> fc2Flags = new ArrayList<>();
+        fc2Flags.add("FC2");
+        fc2Flags.add("FC2-");
+        fc2Flags.add("FC2_");
+        fc2Flags.add("FC\\d{6,7}");
+
+        for (String fc2Flag : fc2Flags) {
+            if (upperName.matches(fc2Flag) || upperName.contains(fc2Flag)) {
+                if ("FC\\d{6,7}".equals(fc2Flag)) {
+                    upperName = upperName.substring(upperName.indexOf("FC"));
+                } else {
+                    upperName = upperName.substring(upperName.indexOf(fc2Flag));
+                }
+                upperName = fc2NameMatch(upperName);
+                return upperName;
+            }
+        }
         Matcher m1 = NORMAL_NAME_REG.matcher(name);
-        String id = "";
+        String id;
         while (m1.find()) {
             String g1 = m1.group(1);
             String g2 = m1.group(2);
@@ -330,15 +416,24 @@ public class FileUtils {
             } else {
                 id = g1 + "-" + g2;
             }
+            return id;
         }
+
+        System.out.printf("%s无法匹配有效规则，请检查\n", name);
+        return name;
+    }
+
+    private static String fc2NameMatch(String name) {
         Matcher m2 = FC2_NAME_REG.matcher(name);
+        String id = "";
         while (m2.find()) {
             String g1 = m2.group(1);
             int end = m2.end(1);
             id = "FC2-" + g1 + name.substring(end);
             if (name.endsWith("CD1") || name.endsWith("CD2") || name.endsWith("CD3") || name.endsWith(
                     "CD4") || name.endsWith("SP") || name.endsWith("_1") || name.endsWith("_2") || name.endsWith(
-                    "_3") || name.endsWith("_4")) {
+                    "_3") || name.endsWith("_4") || name.endsWith("-1") || name.endsWith("-2") || name.endsWith(
+                    "-3") || name.endsWith("-4")) {
                 id = id + name.substring(name.indexOf(g1) + g1.length());
             }
         }
