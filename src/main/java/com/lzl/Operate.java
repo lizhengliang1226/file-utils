@@ -22,6 +22,7 @@ public enum Operate {
                 System.out.print("【" + name + "】开始移动！\t");
                 boolean b = file.renameTo(new File(args[0] + "\\" + name));
                 System.out.println("移动成功！");
+                return Result.success();
             };
         }
     }, DELETE("2", "delete") {
@@ -31,6 +32,7 @@ public enum Operate {
                 System.out.print("【" + file.getName() + "】开始删除！\t");
                 file.delete();
                 System.out.println("删除成功！");
+                return Result.success();
             };
         }
     }, RENAME("3", "rename") {
@@ -41,11 +43,13 @@ public enum Operate {
                 System.out.printf("重命名【%s】===>【%s】\t",file.getName(),dest.getName());
                 boolean b = file.renameTo(dest);
                 if (!b) {
-                    System.out.printf("重命名失败！请检查当前文件【%s】的待重命名的文件【%s】是否已存在，存在请视情况删除！\n",
+                    System.out.printf("重命名失败！请检查当前文件【%s】的待重命名的文件【%s】是否已存在，存在请视情况删除，或文件是否被占用！\n",
                             file.getName(),
                             dest.getName());
+                    return Result.fail();
                 } else {
                     System.out.println("重命名成功！");
+                    return Result.success();
                 }
             };
         }
@@ -59,7 +63,28 @@ public enum Operate {
         FileOperate getOpt(File file, Object... args) {
             return new CreateNfoOperate(file, args);
         }
-    };
+    },
+    ROLLBACK_FILE_NAME("6","rollback file name"){
+        @Override
+        FileOperate getOpt(File file, Object... args) throws IOException, InterruptedException {
+              return () -> {
+                File dest = new File(file.getParent() + "\\" + args[0]);
+                System.out.printf("恢复【%s】===>【%s】\t",file.getName(),dest.getName());
+                boolean b = file.renameTo(dest);
+                if (!b) {
+                    System.out.printf("恢复失败！请检查当前文件【%s】的待恢复名的文件【%s】是否已存在，存在请视情况删除，或文件是否被占用！\n",
+                            file.getName(),
+                            dest.getName());
+                    return Result.fail();
+                } else {
+                    System.out.println("恢复成功！");
+                    return Result.success();
+                }
+            };
+
+        }
+    }
+    ;
     /**
      * 操作代码
      */
