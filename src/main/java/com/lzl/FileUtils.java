@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  */
 public class FileUtils {
     private static final Pattern NORMAL_NAME_REG = Pattern.compile("([A-Z]{2,5})[-_](\\d{3,5})");
-    private static final Pattern FC2_NAME_REG = Pattern.compile("FC2[-_]?(?:P{2}V)?[-_]*(\\d{6,7})");
+    private static final Pattern FC2_NAME_REG = Pattern.compile("FC2?[-_]?(?:P{2}V)?[-_]*(\\d{6,7})");
     /**
      * 操作信息
      */
@@ -393,11 +393,11 @@ public class FileUtils {
         fc2Flags.add("FC2");
         fc2Flags.add("FC2-");
         fc2Flags.add("FC2_");
-        fc2Flags.add("FC\\d{6,7}");
+        fc2Flags.add(".*FC\\d{6,7}.*");
 
         for (String fc2Flag : fc2Flags) {
             if (upperName.matches(fc2Flag) || upperName.contains(fc2Flag)) {
-                if ("FC\\d{6,7}".equals(fc2Flag)) {
+                if (".*FC\\d{6,7}.*".equals(fc2Flag)) {
                     upperName = upperName.substring(upperName.indexOf("FC"));
                 } else {
                     upperName = upperName.substring(upperName.indexOf(fc2Flag));
@@ -430,12 +430,12 @@ public class FileUtils {
             String g1 = m2.group(1);
             int end = m2.end(1);
             id = "FC2-" + g1 + name.substring(end);
-            if (name.endsWith("CD1") || name.endsWith("CD2") || name.endsWith("CD3") || name.endsWith(
-                    "CD4") || name.endsWith("SP") || name.endsWith("_1") || name.endsWith("_2") || name.endsWith(
-                    "_3") || name.endsWith("_4") || name.endsWith("-1") || name.endsWith("-2") || name.endsWith(
-                    "-3") || name.endsWith("-4")) {
-                id = id + name.substring(name.indexOf(g1) + g1.length());
-            }
+//            if (name.endsWith("CD1") || name.endsWith("CD2") || name.endsWith("CD3") || name.endsWith(
+//                    "CD4") || name.endsWith("SP") || name.endsWith("_1") || name.endsWith("_2") || name.endsWith(
+//                    "_3") || name.endsWith("_4") || name.endsWith("-1") || name.endsWith("-2") || name.endsWith(
+//                    "-3") || name.endsWith("-4")) {
+//                id = id + name.substring(name.indexOf(g1) + g1.length());
+//            }
         }
         return id;
     }
