@@ -1,7 +1,6 @@
 package com.lzl;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.setting.dialect.Props;
 import cn.hutool.setting.dialect.PropsUtil;
@@ -9,8 +8,8 @@ import cn.hutool.setting.dialect.PropsUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -36,6 +35,19 @@ public class FileUtils {
     private final Pattern CHINESE_REG = Pattern.compile("[一-龥]");
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
+    /**
+     * 运行时恢复配置，启动时加载
+     */
+    private final Properties runtimeRollbackProps = new Properties();
+    /**
+     * 恢复文件所在路径
+     */
+    private final String rollbackFilePath = Paths.get(GlobalConstant.RUNTIME_JAR_PATH).resolve("rollback.properties")
+                                                 .toAbsolutePath()
+                                                 .toString();
+
+    private final Map<String, String> rollbackMap = new HashMap<>();
+
     public static void main(String[] args) {
         FileUtils fileUtils = new FileUtils();
         // 初始化
@@ -52,30 +64,14 @@ public class FileUtils {
         initRollBackMap();
     }
 
-    private Properties props = null;
-    String jarDir = URLDecoder.decode(new File(
-                    this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent(),
-            StandardCharsets.UTF_8);
 
     private void initRollBackMap() {
-        Properties internalProp = new Properties();
         try {
-            internalProp.load(ResourceUtil.getReader("config/rollback.properties", StandardCharsets.UTF_8));
+            runtimeRollbackProps.load(new FileInputStream(rollbackFilePath));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println(GlobalConstant.RUNTIME_JAR_PATH + "下未读取到原生恢复配置");
         }
-        props = internalProp;
-        // 构建文件路径
-        String filePath = jarDir + File.separator + "rollback.properties";
-        Properties externalProp = new Properties();
-        try {
-            externalProp.load(new FileInputStream(filePath));
-        } catch (IOException e) {
-            System.out.println(jarDir + "下未读取到原生恢复配置");
-        }
-        internalProp.forEach((k, v) -> rollbackMap.putIfAbsent(Objects.toString(k), Objects.toString(v)));
-        externalProp.forEach((k, v) -> rollbackMap.putIfAbsent(Objects.toString(k), Objects.toString(v)));
-
+        runtimeRollbackProps.forEach((k, v) -> rollbackMap.putIfAbsent(Objects.toString(k), Objects.toString(v)));
     }
 
     /**
@@ -84,8 +80,8 @@ public class FileUtils {
     public void start() {
         inputOperateInfo();
         while (true) {
-            boolean b = inputOperateType();
-            if (!b) {
+            boolean isQuit = inputOperateType();
+            if (!isQuit) {
                 break;
             }
             choose(operateInfo.getOperate());
@@ -116,7 +112,7 @@ public class FileUtils {
                                 rollbackMap.putIfAbsent(name, f1.getName());
                                 // 写入日志，记录
                                 FileUtil.appendString(String.format("%s=%s\n", name, f1.getName()),
-                                        new File(jarDir + File.separator + "rollback.properties"),
+                                        new File(rollbackFilePath),
                                         StandardCharsets.UTF_8);
                             }
                         }
@@ -155,18 +151,18 @@ public class FileUtils {
                                 Result res = opt.getOpt(f1, rollbackMap.get(name)).invoke();
                                 if (res.isSuccess()) {
                                     rollbackMap.remove(name);
-                                    props.remove(name);
+                                    runtimeRollbackProps.remove(name);
                                 }
                             }
                         } catch (IOException | InterruptedException e) {
                             throw new RuntimeException(e);
                         }
                     });
-                    FileUtil.writeString("", new File(jarDir + File.separator + "rollback.properties"),
+                    FileUtil.writeString("", new File(rollbackFilePath),
                             StandardCharsets.UTF_8);
-                    for (Map.Entry<Object, Object> e : props.entrySet()) {
+                    for (Map.Entry<Object, Object> e : runtimeRollbackProps.entrySet()) {
                         FileUtil.appendString(String.format("%s=%s\n", e.getKey(), e.getValue()),
-                                new File(jarDir + File.separator + "rollback.properties"),
+                                new File(rollbackFilePath),
                                 StandardCharsets.UTF_8);
                     }
                 }
@@ -233,15 +229,20 @@ public class FileUtils {
         while (true) {
             printOperateTips();
             opt = GlobalConstant.SCANNER.nextLine();
-            if (!opt.matches("\\d+") || Operate.values().length < Integer.parseInt(opt)) {
-                if ("q".equals(opt)) {
-                    return false;
+            try {
+                if (!opt.matches("\\d+") || Operate.values().length < Integer.parseInt(opt)) {
+                    if ("q".equals(opt)) {
+                        return false;
+                    }
+                    System.out.println("请输入正确的操作代码，只允许以下操作！");
+                } else {
+                    operateInfo.setOperate(Operate.getOperateByCode(opt));
+                    return true;
                 }
+            } catch (Exception e) {
                 System.out.println("请输入正确的操作代码，只允许以下操作！");
-            } else {
-                operateInfo.setOperate(Operate.getOperateByCode(opt));
-                return true;
             }
+
         }
     }
 
@@ -335,10 +336,8 @@ public class FileUtils {
     private void initReplaceMap() {
         Props props = PropsUtil.get("config/replace.txt");
         Properties p = new Properties();
-        String jarDir = new File(
-                this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath()).getParent();
         // 构建文件路径
-        String filePath = jarDir + File.separator + "replace.txt";
+        String filePath = Paths.get(GlobalConstant.RUNTIME_JAR_PATH).resolve("replace.txt").toAbsolutePath().toString();
         try {
             p.load(new FileInputStream(filePath));
         } catch (IOException e) {
@@ -385,7 +384,6 @@ public class FileUtils {
         return name + ext;
     }
 
-    private final Map<String, String> rollbackMap = new HashMap<>();
 
     public String getId(String name) {
         String upperName = name.toUpperCase();
@@ -394,7 +392,6 @@ public class FileUtils {
         fc2Flags.add("FC2-");
         fc2Flags.add("FC2_");
         fc2Flags.add(".*FC\\d{6,7}.*");
-
         for (String fc2Flag : fc2Flags) {
             if (upperName.matches(fc2Flag) || upperName.contains(fc2Flag)) {
                 if (".*FC\\d{6,7}.*".equals(fc2Flag)) {
@@ -430,12 +427,6 @@ public class FileUtils {
             String g1 = m2.group(1);
             int end = m2.end(1);
             id = "FC2-" + g1 + name.substring(end);
-//            if (name.endsWith("CD1") || name.endsWith("CD2") || name.endsWith("CD3") || name.endsWith(
-//                    "CD4") || name.endsWith("SP") || name.endsWith("_1") || name.endsWith("_2") || name.endsWith(
-//                    "_3") || name.endsWith("_4") || name.endsWith("-1") || name.endsWith("-2") || name.endsWith(
-//                    "-3") || name.endsWith("-4")) {
-//                id = id + name.substring(name.indexOf(g1) + g1.length());
-//            }
         }
         return id;
     }

@@ -1,5 +1,8 @@
 package com.lzl;
 
+import java.io.File;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -25,4 +28,11 @@ public class GlobalConstant {
         add("iso");
         add("mpg");
     }};
+
+    /**
+     * 运行时jar所在文件夹
+     */
+    public static final String RUNTIME_JAR_PATH = URLDecoder.decode(new File(
+                    GlobalConstant.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getParent(),
+            StandardCharsets.UTF_8);
 }
