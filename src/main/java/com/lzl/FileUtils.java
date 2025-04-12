@@ -107,6 +107,11 @@ public class FileUtils {
                         String name = f1.getName();
                         if (!isContainChinese(name)) {
                             name = getSimpleName(name);
+                            // 如果新旧名字相同则什么也不做
+                            if(name.equals(f1.getName())){
+                                System.out.printf("%s新旧名称相同，不做操作\n",name);
+                                return;
+                            }
                             Result res = opt.getOpt(f1, name).invoke();
                             if (res.isSuccess()) {
                                 rollbackMap.putIfAbsent(name, f1.getName());
@@ -158,13 +163,10 @@ public class FileUtils {
                             throw new RuntimeException(e);
                         }
                     });
-                    FileUtil.writeString("", new File(rollbackFilePath),
+                    String rollbackContent = runtimeRollbackProps.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
+                                                         .collect(Collectors.joining("\n"));
+                    FileUtil.writeString(Objects.toString(rollbackContent,""), new File(rollbackFilePath),
                             StandardCharsets.UTF_8);
-                    for (Map.Entry<Object, Object> e : runtimeRollbackProps.entrySet()) {
-                        FileUtil.appendString(String.format("%s=%s\n", e.getKey(), e.getValue()),
-                                new File(rollbackFilePath),
-                                StandardCharsets.UTF_8);
-                    }
                 }
                 default -> System.out.println("没有该操作或还没开发！");
             }
