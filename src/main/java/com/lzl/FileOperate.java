@@ -107,7 +107,7 @@ public enum FileOperate {
 
         }
     },
-    BATCH_CONTENT_REPLACE("7", "batch rename actor") {
+    BATCH_CONTENT_REPLACE("7", "batch rename nfo content") {
         @Override
         Result invoke(File file, Object... args) {
             // 操作NFO文件，读取文件内容，将其中的args[0]，替换成args[1]
