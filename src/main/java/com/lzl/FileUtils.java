@@ -31,10 +31,27 @@ public class FileUtils {
     /**
      * 操作信息
      */
-    private final OperateInfo operateInfo = new OperateInfo();
+//    private final OperateInfo operateInfo = new OperateInfo();
     private final Pattern CHINESE_REG = Pattern.compile("[一-龥]");
     private static final Map<String, String> replaceMap = new HashMap<>(16);
 
+
+    /**
+     * 操作处理源路径
+     */
+    private File optSrcPath;
+    /**
+     * 操作文件扩展名
+     */
+    private String optExtensions;
+    /**
+     * 操作为目标路径
+     */
+    private String optTargetPath;
+    /**
+     * 要做的操作
+     */
+    private FileOperate fileOperate;
     /**
      * 运行时恢复配置，启动时加载
      */
@@ -43,8 +60,7 @@ public class FileUtils {
      * 恢复文件所在路径
      */
     private final String rollbackFilePath = Paths.get(GlobalConstant.RUNTIME_JAR_PATH).resolve("rollback.properties")
-                                                 .toAbsolutePath()
-                                                 .toString();
+                                                 .toAbsolutePath().toString();
 
     private final Map<String, String> rollbackMap = new HashMap<>();
 
@@ -84,113 +100,106 @@ public class FileUtils {
             if (!isQuit) {
                 break;
             }
-            choose(operateInfo.getOperate());
+            choose();
         }
     }
+
 
     /**
      * 选择功能
      */
-    public void choose(Operate opt) {
-        if (confirmOperate()) {
-            File srcPath = new File(operateInfo.getOptSrcPath());
-            switch (opt) {
-                case MOVE -> batchOperate(srcPath, (name) -> false, (f1) -> {
-                    try {
-                        opt.getOpt(f1, operateInfo.getOptTargetPath()).invoke();
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                case RENAME -> batchOperate(srcPath, (name) -> name.matches("^\\d+_.*"), (f1) -> {
-                    try {
-                        String name = f1.getName();
-                        if (!isContainChinese(name)) {
-                            name = getSimpleName(name);
-                            // 如果新旧名字相同则什么也不做
-                            if(name.equals(f1.getName())){
-                                System.out.printf("%s新旧名称相同，不做操作\n",name);
-                                return;
-                            }
-                            Result res = opt.getOpt(f1, name).invoke();
-                            if (res.isSuccess()) {
-                                rollbackMap.putIfAbsent(name, f1.getName());
-                                // 写入日志，记录
-                                FileUtil.appendString(String.format("%s=%s\n", name, f1.getName()),
-                                        new File(rollbackFilePath),
-                                        StandardCharsets.UTF_8);
-                            }
-                        }
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                case COPY -> {
-                    List<File> fileList = new ArrayList<>();
-                    searchAllFile(srcPath, fileList);
-                    fileList.parallelStream().forEach(f -> {
-                        try {
-                            opt.getOpt(f, operateInfo.getOptTargetPath()).invoke();
-                        } catch (IOException | InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                }
-                case CREATE_NFO -> batchOperate(srcPath, (name) -> false, (f1) -> {
-                    try {
-                        opt.getOpt(f1, "未知演员", operateInfo.getOptTargetPath()).invoke();
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                case ROLLBACK_FILE_NAME -> {
-                    initRollBackMap();
-                    if (rollbackMap.isEmpty()) {
-                        System.out.println("没有可恢复的文件名，请检查！");
-                        return;
-                    }
-                    batchOperate(srcPath, (name) -> name.matches("^\\d+_.*"), (f1) -> {
-                        try {
-                            String name = f1.getName();
-                            if (rollbackMap.containsKey(name)) {
-                                Result res = opt.getOpt(f1, rollbackMap.get(name)).invoke();
-                                if (res.isSuccess()) {
-                                    rollbackMap.remove(name);
-                                    runtimeRollbackProps.remove(name);
-                                }
-                            }
-                        } catch (IOException | InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    String rollbackContent = runtimeRollbackProps.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
-                                                         .collect(Collectors.joining("\n"));
-                    FileUtil.writeString(Objects.toString(rollbackContent,""), new File(rollbackFilePath),
-                            StandardCharsets.UTF_8);
-                }
-                default -> System.out.println("没有该操作或还没开发！");
-            }
+    public void choose() {
+        if (!confirmOperate()) {
+            return;
         }
+        switch (fileOperate) {
+            case MOVE -> moveFile();
+            case RENAME -> renameFile();
+            case COPY -> copyFile();
+            case CREATE_NFO -> createNfoForFile();
+            case ROLLBACK_FILE_NAME -> rollbackFileName();
+            default -> System.out.println("没有该操作或还没开发！");
+        }
+    }
+
+    private void rollbackFileName() {
+        initRollBackMap();
+        if (rollbackMap.isEmpty()) {
+            System.out.println("没有可恢复的文件名，请检查！");
+            return;
+        }
+        batchOperate(optSrcPath,
+                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (f1) -> {
+                    String name = f1.getName();
+                    if (rollbackMap.containsKey(name)) {
+                        Result res = fileOperate.invoke(f1, rollbackMap.get(name));
+                        if (res.isSuccess()) {
+                            rollbackMap.remove(name);
+                            runtimeRollbackProps.remove(name);
+                        }
+                    }
+
+                });
+        String rollbackContent = runtimeRollbackProps.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
+                                                     .collect(Collectors.joining("\n"));
+        FileUtil.writeString(Objects.toString(rollbackContent, ""), new File(rollbackFilePath), StandardCharsets.UTF_8);
+    }
+
+    private void createNfoForFile() {
+        batchOperate(optSrcPath,
+                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (f1) -> fileOperate.invoke(f1, "未知演员", optTargetPath));
+    }
+
+    private void copyFile() {
+        List<File> fileList = new ArrayList<>();
+        searchAllFile(optSrcPath, fileList);
+        fileList.parallelStream().forEach(file -> fileOperate.invoke(file, optTargetPath));
+    }
+
+    private void renameFile() {
+        batchOperate(optSrcPath,
+                (file) -> !isContainChinese(file.getName()) && optExtensions
+                                                                          .contains(getFileExt(file).toLowerCase()),
+                (file) -> renameFileByOpt(fileOperate, file));
+    }
+
+    private void renameFileByOpt(FileOperate opt, File file) {
+        String name = file.getName();
+        String simpleName = getSimpleName(name);
+        // 如果新旧名字相同则什么也不做
+        if (simpleName.equals(name)) {
+            System.out.printf("%s新旧名称相同，不做操作\n", name);
+            return;
+        }
+        Result res = opt.invoke(file, simpleName);
+        if (res.isSuccess()) {
+            rollbackMap.putIfAbsent(simpleName, name);
+            // 写入日志，记录
+            FileUtil.appendString(String.format("%s=%s\n", simpleName, name), new File(rollbackFilePath),
+                    StandardCharsets.UTF_8);
+        }
+    }
+
+    private void moveFile() {
+        batchOperate(optSrcPath,
+                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (file) -> fileOperate.invoke(file, optTargetPath));
     }
 
     /**
      * 批量操作，遍历目录下的所有文件，如果是目录，根据断言判断此目录是否要跳过，是文件，判断文件扩展名符合操作扩展名，则调用消费者接口执行对应的文件操作
      *
-     * @param file       操作文件列表
-     * @param shouldSkip 文件为目录时是否应该跳过操作的断言
-     * @param opt        对文件执行的操作
+     * @param file          操作文件列表
+     * @param shouldNotSkip 文件为目录时是否应该跳过操作的断言
+     * @param opt           对文件执行的操作
      */
-    private void batchOperate(File file, Predicate<String> shouldSkip, Consumer<File> opt) {
+    private void batchOperate(File file, Predicate<File> shouldNotSkip, Consumer<File> opt) {
         final File[] files = file.listFiles();
         assert files != null;
         for (File f1 : files) {
             if (f1.isDirectory()) {
-                if (!shouldSkip.test(f1.getName())) {
-                    batchOperate(f1, shouldSkip, opt);
-                }
+                batchOperate(f1, shouldNotSkip, opt);
             } else {
-                String fileExt = getFileExt(f1);
-                if (operateInfo.getOptExts().contains(fileExt.toLowerCase())) {
+                if (shouldNotSkip.test(f1)) {
                     opt.accept(f1);
                 }
             }
@@ -216,7 +225,7 @@ public class FileUtils {
                 searchAllFile(f1, result);
             } else {
                 String fileExt = getFileExt(f1);
-                if (operateInfo.getOptExts().contains(fileExt.toLowerCase())) {
+                if (optExtensions.contains(fileExt.toLowerCase())) {
                     result.add(f1);
                 }
             }
@@ -232,13 +241,13 @@ public class FileUtils {
             printOperateTips();
             opt = GlobalConstant.SCANNER.nextLine();
             try {
-                if (!opt.matches("\\d+") || Operate.values().length < Integer.parseInt(opt)) {
+                if (!opt.matches("\\d+") || FileOperate.values().length < Integer.parseInt(opt)) {
                     if ("q".equals(opt)) {
                         return false;
                     }
                     System.out.println("请输入正确的操作代码，只允许以下操作！");
                 } else {
-                    operateInfo.setOperate(Operate.getOperateByCode(opt));
+                    fileOperate = FileOperate.getFileOperateEnumByCode(opt);
                     return true;
                 }
             } catch (Exception e) {
@@ -255,15 +264,15 @@ public class FileUtils {
         System.out.println("请输入操作方式(q退出)：");
         System.out.println("+" + "-".repeat(60) + "+");
         int i = 0;
-        for (int i1 = 0; i1 < Operate.values().length; i1++) {
-            Operate operate = Operate.values()[i1];
+        for (int i1 = 0; i1 < FileOperate.values().length; i1++) {
+            FileOperate fileOperate = FileOperate.values()[i1];
             i++;
-            String s = operate.getCode() + "." + operate.getDesc();
+            String s = fileOperate.getCode() + "." + fileOperate.getDesc();
             if (i % 2 == 0) {
                 System.out.printf("%-30s|\n", s);
             } else {
                 System.out.printf("|%-30s", s);
-                if (i1 == Operate.values().length - 1) {
+                if (i1 == FileOperate.values().length - 1) {
                     System.out.printf("%30s|%n", "");
                 }
             }
@@ -275,8 +284,7 @@ public class FileUtils {
      * 输入操作信息
      */
     private void inputOperateInfo() {
-        inputInfo(
-                () -> {
+        inputInfo(() -> {
                     System.out.println("请输入操作目录(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
                     String srcPath;
                     srcPath = GlobalConstant.SCANNER.nextLine();
@@ -284,25 +292,22 @@ public class FileUtils {
                         srcPath = GlobalConstant.CUR_PATH;
                     }
                     return srcPath;
-                },
-                this::isDir,
-                operateInfo::setOptSrcPath,
+                }, this::isDir, this::setOptSrcPath,
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
         inputInfo(() -> {
-                    System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",",
-                            GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
-                    String extensions = GlobalConstant.SCANNER.nextLine();
-                    if (StrUtil.isBlank(extensions)) {
-                        extensions = String.join(",", GlobalConstant.VIDEO_EXTS);
-                    }
-                    return extensions;
-                }, (extensions) -> !Arrays.stream(extensions.split(","))
-                                          .filter(GlobalConstant.VIDEO_EXTS::contains).toList().isEmpty(),
-                (extensions) -> {
-                    extensions = Arrays.stream(extensions.split(","))
-                                       .filter(GlobalConstant.VIDEO_EXTS::contains).collect(Collectors.joining(","));
-                    operateInfo.setOptExts(extensions.toLowerCase());
-                }, (extensions) -> System.out.println("输入的扩展名【" + extensions + "】不合法，请重新输入!"));
+            System.out.println("请输入要操作文件的扩展名(默认【" + String.join(",",
+                    GlobalConstant.VIDEO_EXTS) + "】多个以逗号分隔)：");
+            String extensions = GlobalConstant.SCANNER.nextLine();
+            if (StrUtil.isBlank(extensions)) {
+                extensions = String.join(",", GlobalConstant.VIDEO_EXTS);
+            }
+            return extensions;
+        }, (extensions) -> !Arrays.stream(extensions.split(",")).filter(GlobalConstant.VIDEO_EXTS::contains).toList()
+                                  .isEmpty(), (extensions) -> {
+            extensions = Arrays.stream(extensions.split(",")).filter(GlobalConstant.VIDEO_EXTS::contains)
+                               .collect(Collectors.joining(","));
+            this.setOptExtensions(extensions.toLowerCase());
+        }, (extensions) -> System.out.println("输入的扩展名【" + extensions + "】不合法，请重新输入!"));
         inputInfo(() -> {
                     System.out.println("请输入要操作的目标位置(默认当前目录【" + GlobalConstant.CUR_PATH + "】)：");
                     String tagPath = GlobalConstant.SCANNER.nextLine();
@@ -310,7 +315,7 @@ public class FileUtils {
                         tagPath = GlobalConstant.CUR_PATH;
                     }
                     return tagPath;
-                }, this::isDir, operateInfo::setOptTargetPath,
+                }, this::isDir, this::setOptTargetPath,
                 (path) -> System.out.println("输入的路径【" + path + "】不存在，请重新输入!"));
     }
 
@@ -364,26 +369,27 @@ public class FileUtils {
     /**
      * 获取文件符合要求的名称
      *
-     * @param name 原来的文件名
+     * @param originalName 原来的文件名
      * @return 格式化后的文件名
      */
-    private String getSimpleName(String name) {
+    private String getSimpleName(String originalName) {
+        String formatName = originalName;
         // 遍历替换map，将名字中不需要的字符替换掉
         for (Map.Entry<String, String> entry : replaceMap.entrySet()) {
             String k = entry.getKey();
             String v = entry.getValue();
-            name = name.replace(k, v);
+            formatName = formatName.replace(k, v);
         }
-        name = name.strip();
-        String ext = name.substring(name.lastIndexOf("."));
-        name = name.substring(0, name.lastIndexOf(".")).toUpperCase();
-        String id = getId(name);
+        formatName = formatName.strip();
+        String ext = formatName.substring(formatName.lastIndexOf("."));
+        formatName = formatName.substring(0, formatName.lastIndexOf(".")).toUpperCase();
+        String id = getId(formatName);
         if (id.length() >= 6) {
-            name = id;
+            return id + ext;
         } else {
-            System.out.printf("id:[%s]长度不符合要求，将使用原文件名，请检查文件：%s\n", id, name);
+            System.out.printf("id:[%s]长度不符合要求，将使用原文件名，请检查文件：%s\n", id, originalName);
+            return originalName;
         }
-        return name + ext;
     }
 
 
@@ -445,9 +451,9 @@ public class FileUtils {
      * 打印警告信息，确认操作
      */
     private boolean confirmOperate() {
-        System.out.println(operateInfo.getOperate().getDesc() + "操作=>文件源目录：" + operateInfo.getOptSrcPath());
-        System.out.println(operateInfo.getOperate().getDesc() + "操作=>文件目标目录：" + operateInfo.getOptTargetPath());
-        System.out.println(operateInfo.getOperate().getDesc() + "操作=>文件扩展名：" + operateInfo.getOptExts());
+        System.out.println(fileOperate.getDesc() + "操作=>文件源目录：" +optSrcPath.getAbsolutePath());
+        System.out.println(fileOperate.getDesc() + "操作=>文件目标目录：" + optTargetPath);
+        System.out.println(fileOperate.getDesc() + "操作=>文件扩展名：" + optExtensions);
         System.out.println("以上信息是否正确，确定执行操作吗？(y/n)");
         String flag = GlobalConstant.SCANNER.nextLine();
         while (!"y".equals(flag) && !"n".equals(flag)) {
@@ -456,4 +462,16 @@ public class FileUtils {
         }
         return "y".equals(flag);
     }
+    public void setOptSrcPath(String optSrcPath) {
+        this.optSrcPath = new File(optSrcPath);
+    }
+
+    public void setOptExtensions(String optExtensions) {
+        this.optExtensions = optExtensions;
+    }
+
+    public void setOptTargetPath(String optTargetPath) {
+        this.optTargetPath = optTargetPath;
+    }
+
 }
