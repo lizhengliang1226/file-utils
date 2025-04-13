@@ -28,14 +28,8 @@ import java.util.stream.Collectors;
 public class FileUtils {
     private static final Pattern NORMAL_NAME_REG = Pattern.compile("([A-Z]{2,5})[-_](\\d{3,5})");
     private static final Pattern FC2_NAME_REG = Pattern.compile("FC2?[-_]?(?:P{2}V)?[-_]*(\\d{6,7})");
-    /**
-     * 操作信息
-     */
-//    private final OperateInfo operateInfo = new OperateInfo();
     private final Pattern CHINESE_REG = Pattern.compile("[一-龥]");
     private static final Map<String, String> replaceMap = new HashMap<>(16);
-
-
     /**
      * 操作处理源路径
      */
@@ -61,7 +55,6 @@ public class FileUtils {
      */
     private final String rollbackFilePath = Paths.get(GlobalConstant.RUNTIME_JAR_PATH).resolve("rollback.properties")
                                                  .toAbsolutePath().toString();
-
     private final Map<String, String> rollbackMap = new HashMap<>();
 
     public static void main(String[] args) {
@@ -128,26 +121,25 @@ public class FileUtils {
             System.out.println("没有可恢复的文件名，请检查！");
             return;
         }
-        batchOperate(optSrcPath,
-                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (f1) -> {
-                    String name = f1.getName();
-                    if (rollbackMap.containsKey(name)) {
-                        Result res = fileOperate.invoke(f1, rollbackMap.get(name));
-                        if (res.isSuccess()) {
-                            rollbackMap.remove(name);
-                            runtimeRollbackProps.remove(name);
-                        }
-                    }
+        batchOperate(optSrcPath, (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (f1) -> {
+            String name = f1.getName();
+            if (rollbackMap.containsKey(name)) {
+                Result res = fileOperate.invoke(f1, rollbackMap.get(name));
+                if (res.isSuccess()) {
+                    rollbackMap.remove(name);
+                    runtimeRollbackProps.remove(name);
+                }
+            }
 
-                });
+        });
         String rollbackContent = runtimeRollbackProps.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
                                                      .collect(Collectors.joining("\n"));
         FileUtil.writeString(Objects.toString(rollbackContent, ""), new File(rollbackFilePath), StandardCharsets.UTF_8);
     }
 
     private void createNfoForFile() {
-        batchOperate(optSrcPath,
-                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (f1) -> fileOperate.invoke(f1, "未知演员", optTargetPath));
+        batchOperate(optSrcPath, (file) -> optExtensions.contains(getFileExt(file).toLowerCase()),
+                (f1) -> fileOperate.invoke(f1, "未知演员", optTargetPath));
     }
 
     private void copyFile() {
@@ -158,8 +150,7 @@ public class FileUtils {
 
     private void renameFile() {
         batchOperate(optSrcPath,
-                (file) -> !isContainChinese(file.getName()) && optExtensions
-                                                                          .contains(getFileExt(file).toLowerCase()),
+                (file) -> !isContainChinese(file.getName()) && optExtensions.contains(getFileExt(file).toLowerCase()),
                 (file) -> renameFileByOpt(fileOperate, file));
     }
 
@@ -181,8 +172,8 @@ public class FileUtils {
     }
 
     private void moveFile() {
-        batchOperate(optSrcPath,
-                (file) -> optExtensions.contains(getFileExt(file).toLowerCase()), (file) -> fileOperate.invoke(file, optTargetPath));
+        batchOperate(optSrcPath, (file) -> optExtensions.contains(getFileExt(file).toLowerCase()),
+                (file) -> fileOperate.invoke(file, optTargetPath));
     }
 
     /**
@@ -451,7 +442,7 @@ public class FileUtils {
      * 打印警告信息，确认操作
      */
     private boolean confirmOperate() {
-        System.out.println(fileOperate.getDesc() + "操作=>文件源目录：" +optSrcPath.getAbsolutePath());
+        System.out.println(fileOperate.getDesc() + "操作=>文件源目录：" + optSrcPath.getAbsolutePath());
         System.out.println(fileOperate.getDesc() + "操作=>文件目标目录：" + optTargetPath);
         System.out.println(fileOperate.getDesc() + "操作=>文件扩展名：" + optExtensions);
         System.out.println("以上信息是否正确，确定执行操作吗？(y/n)");
@@ -462,6 +453,7 @@ public class FileUtils {
         }
         return "y".equals(flag);
     }
+
     public void setOptSrcPath(String optSrcPath) {
         this.optSrcPath = new File(optSrcPath);
     }
