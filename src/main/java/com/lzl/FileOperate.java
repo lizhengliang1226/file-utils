@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * @author Reflect
@@ -112,19 +113,25 @@ public enum FileOperate {
             // 操作NFO文件，读取文件内容，将其中的args[0]，替换成args[1]
             String replaceContent = null;
             try {
-                replaceContent = Files.readString(Paths.get(file.toURI())).replace(
-                        Objects.toString(args[0]), Objects.toString(args[1]));
+                System.out.printf("替换文件%s中的内容%s为%s开始\t", file.getName(), args[0], args[1]);
+                String originalContent = Files.readString(Paths.get(file.toURI()));
+                String regex = "\\b" + Pattern.quote(Objects.toString(args[0])) + "\\b";
+                replaceContent = originalContent.replaceAll(regex, Objects.toString(args[1]));
             } catch (IOException e) {
+                System.out.println("在文件读取阶段替换失败");
                 throw new RuntimeException(e);
             }
             if (replaceContent.isEmpty()) {
+                System.out.println("替换失败，替换后文本为空");
                 return Result.fail();
             }
             try {
                 Files.writeString(Paths.get(file.toURI()), replaceContent);
             } catch (IOException e) {
+                System.out.println("在文件写入阶段替换失败");
                 throw new RuntimeException(e);
             }
+            System.out.println("替换成功");
             return Result.success();
         }
     };

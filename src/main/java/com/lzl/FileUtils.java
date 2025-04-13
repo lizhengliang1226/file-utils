@@ -111,8 +111,26 @@ public class FileUtils {
             case COPY -> copyFile();
             case CREATE_NFO -> createNfoForFile();
             case ROLLBACK_FILE_NAME -> rollbackFileName();
+            case BATCH_CONTENT_REPLACE -> batchReplaceContent();
             default -> System.out.println("没有该操作或还没开发！");
         }
+    }
+
+    private void batchReplaceContent() {
+        System.out.println("请输入要替换的文本，用“=”分隔，例子：aaa=bbb，将nfo文件中的aaa替换成bbb");
+        String replaceContent = GlobalConstant.SCANNER.nextLine();
+        if (!replaceContent.contains("=")) {
+            System.out.println("输入格式错误，必须为：xxx=yyy");
+            return;
+        }
+        String[] s = replaceContent.split("=");
+        if (s.length != 2) {
+            System.out.println("不能输入多个“=”！，也不支持将内容替换为空！");
+            return;
+        }
+        batchOperate(optSrcPath, (file) -> getFileExt(file).toLowerCase().contains("nfo"), (file) -> {
+            fileOperate.invoke(file, s[0], s[1]);
+        });
     }
 
     private void rollbackFileName() {
@@ -244,7 +262,6 @@ public class FileUtils {
             } catch (Exception e) {
                 System.out.println("请输入正确的操作代码，只允许以下操作！");
             }
-
         }
     }
 
